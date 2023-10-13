@@ -22,14 +22,39 @@ public:
 class BaseNode {
 public:
     /**
-     * Constructor
+     * Constructor - Initialize header
      */
-    BaseNode() = default;
+    BaseNode(NodeType node_type, int size) : header_{node_type, size} {}
 
     /**
-     * Destructor
+     *
+     * @return The type of the node
      */
-    ~BaseNode() = default;
+    NodeType GetType() const { return header_.node_type_; }
+
+    /**
+     *
+     * @return The count of key-value entries in this node
+     */
+    int GetSize() const { return header_.size_; }
+
+    /**
+     *
+     * @return A const reference to the header of the node
+     */
+    const NodeHeader &GetNodeHeader() const { return header_; }
+
+    /**
+     *
+     * @return true if the node is a leaf node
+     */
+    bool IsLeafNode() const { return GetType() == NodeType::LeafNode; }
+
+    /**
+     *
+     * @return true if the node is an internal node
+     */
+    bool IsInternalNode() const { return GetType() == NodeType::InternalNode; }
 
     /**
      *
@@ -61,21 +86,24 @@ private:
 
     int leaf_node_max_size_ = 128;
     int leaf_node_min_size_ = std::ceil((leaf_node_max_size_ - 1) / 2);
+
+    NodeHeader header_;
 };
 
 int main() {
-    auto b = BaseNode();
+    auto inner = BaseNode(NodeType::InternalNode, 10);
+    auto leaf = BaseNode(NodeType::LeafNode, 4);
 
-    std::cout << "Internal node max: " << b.GetInternalNodeMaxSize() << " min: " << b.GetInternalNodeMinSize()
+    std::cout << std::boolalpha
+              << "Is internal node? " << inner.IsInternalNode()
+              << std::noboolalpha
+              << " size: " << inner.GetSize()
               << std::endl;
-    std::cout << "Leaf node max: " << b.GetLeafNodeMaxSize() << " min: " << b.GetLeafNodeMinSize() << std::endl;
 
-    auto internal_header = NodeHeader(NodeType::InternalNode, 5);
-    auto leaf_header = NodeHeader(NodeType::LeafNode, 4);
-
-    std::cout << "Node type: " << static_cast<int>(internal_header.node_type_) << " size: " << internal_header.size_
-              << std::endl;
-    std::cout << "Node type: " << static_cast<int>(leaf_header.node_type_) << " size: " << leaf_header.size_
+    std::cout << std::boolalpha
+              << "Is leaf node? " << leaf.IsLeafNode()
+              << std::noboolalpha
+              << " size: " << leaf.GetSize()
               << std::endl;
 
     return 0;

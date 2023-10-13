@@ -5,6 +5,20 @@ enum class NodeType : int {
     InternalNode = 0, LeafNode = 1
 };
 
+class NodeHeader {
+public:
+    /** The type of the node */
+    NodeType node_type_;
+
+    /** Count of key-value pairs in this node */
+    int size_;
+
+    /**
+     * Constructor
+     */
+    NodeHeader(NodeType node_type, int size) : node_type_{node_type}, size_{size} {}
+};
+
 class BaseNode {
 public:
     /**
@@ -55,6 +69,14 @@ int main() {
     std::cout << "Internal node max: " << b.GetInternalNodeMaxSize() << " min: " << b.GetInternalNodeMinSize()
               << std::endl;
     std::cout << "Leaf node max: " << b.GetLeafNodeMaxSize() << " min: " << b.GetLeafNodeMinSize() << std::endl;
+
+    auto internal_header = NodeHeader(NodeType::InternalNode, 5);
+    auto leaf_header = NodeHeader(NodeType::LeafNode, 4);
+
+    std::cout << "Node type: " << static_cast<int>(internal_header.node_type_) << " size: " << internal_header.size_
+              << std::endl;
+    std::cout << "Node type: " << static_cast<int>(leaf_header.node_type_) << " size: " << leaf_header.size_
+              << std::endl;
 
     return 0;
 }

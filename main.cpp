@@ -56,6 +56,22 @@ public:
      */
     bool IsInternalNode() const { return GetType() == NodeType::InternalNode; }
 
+private:
+    NodeHeader header_;
+};
+
+class BPlusTreeBase {
+public:
+    /**
+     * Constructor
+     */
+    BPlusTreeBase() = default;
+
+    /**
+     * Destructor
+     */
+    ~BPlusTreeBase() = default;
+
     /**
      *
      * @return the size for internal node split [fanout]
@@ -82,12 +98,10 @@ public:
 
 private:
     int internal_node_max_size_ = 128;
-    int internal_node_min_size_ = std::ceil(internal_node_max_size_ / 2) - 1;
+    int internal_node_min_size_ = 63; /** ⌈fanout / 2⌉ - 1 */
 
     int leaf_node_max_size_ = 128;
-    int leaf_node_min_size_ = std::ceil((leaf_node_max_size_ - 1) / 2);
-
-    NodeHeader header_;
+    int leaf_node_min_size_ = 64; /** ⌈(fanout - 1) / 2⌉ */
 };
 
 int main() {
@@ -104,6 +118,14 @@ int main() {
               << "Is leaf node? " << leaf.IsLeafNode()
               << std::noboolalpha
               << " size: " << leaf.GetSize()
+              << std::endl;
+
+    auto tree = BPlusTreeBase();
+    std::cout << "Internal max: " << tree.GetInternalNodeMaxSize()
+              << " min: " << tree.GetInternalNodeMinSize()
+              << std::endl;
+    std::cout << "Leaf max: " << tree.GetLeafNodeMaxSize()
+              << " min: " << tree.GetLeafNodeMinSize()
               << std::endl;
 
     return 0;

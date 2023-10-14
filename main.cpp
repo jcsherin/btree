@@ -56,6 +56,11 @@ public:
     bool IsInternalNode() const { return GetType() == NodeType::InternalNode; }
 
 private:
+    /**
+     * The header contains:
+     * 1. type of the node
+     * 2. count of key-value entries
+     */
     NodeHeader header_;
 };
 

@@ -86,17 +86,41 @@ public:
      */
     int GetSize() const { return size_; }
 
-    static ElasticNode *Get(int size, NodeType node_type, int item_count) {
+    /**
+     * Call this static method to construct an elastic node of a certain size.
+     *
+     * @param size the fanout of the node
+     * @param node_type which is either `InternalNode` or  `LeafNode`
+     * @return
+     */
+    static ElasticNode *Get(int size, NodeType node_type) {
         auto *alloc_base = new char[sizeof(ElasticNode) + size * sizeof(ElementType)];
 
         auto elastic_node = reinterpret_cast<ElasticNode *>(alloc_base);
         /**
          * Placement new: See https://en.cppreference.com/w/cpp/language/new#Placement_new
          */
-        new(elastic_node) ElasticNode{size, node_type, item_count};
+        new(elastic_node) ElasticNode{size, node_type};
 
         return elastic_node;
     }
+
+    /**
+     * The struct hack makes it possible to have an embedded data array of
+     * dynamic size while keeping a flat memory layout. In the constructor
+     * the data array starts out empty, and the space for it is allocated
+     * only after we call the static `ElasticNode::Get` method.
+     *
+     * In `Get` placement new is used to separate allocation and construction
+     * of the elastic node. The destructor is not automatically called on
+     * such a node, and we therefore have to call the `FreeElasticNode`
+     * method to free the memory we allocated for the data array.
+     */
+    void FreeElasticNode() {
+        ElasticNode *allocation_start = this;
+        delete[] reinterpret_cast<char *>(allocation_start);
+    }
+
 };
 
 class BPlusTreeBase {
@@ -144,28 +168,8 @@ private:
 };
 
 int main() {
-    auto inner = BaseNode(NodeType::InternalNode, 10);
-    auto leaf = BaseNode(NodeType::LeafNode, 4);
-
-    std::cout << std::boolalpha
-              << "Is internal node? " << inner.IsInternalNode()
-              << std::noboolalpha
-              << " size: " << inner.GetSize()
-              << std::endl;
-
-    std::cout << std::boolalpha
-              << "Is leaf node? " << leaf.IsLeafNode()
-              << std::noboolalpha
-              << " size: " << leaf.GetSize()
-              << std::endl;
-
-    auto tree = BPlusTreeBase();
-    std::cout << "Internal max: " << tree.GetInternalNodeMaxSize()
-              << " min: " << tree.GetInternalNodeMinSize()
-              << std::endl;
-    std::cout << "Leaf max: " << tree.GetLeafNodeMaxSize()
-              << " min: " << tree.GetLeafNodeMinSize()
-              << std::endl;
+    auto elastic_node = ElasticNode<std::pair<int, int>>::Get(10, NodeType::LeafNode);
+    elastic_node->FreeElasticNode();
 
     return 0;
 }

@@ -9,13 +9,10 @@ public:
     /** The type of the node */
     NodeType node_type_;
 
-    /** Count of key-value pairs in this node */
-    int item_count_;
-
     /**
      * Constructor
      */
-    NodeHeader(NodeType node_type, int item_count) : node_type_{node_type}, item_count_{item_count} {}
+    NodeHeader(NodeType node_type) : node_type_{node_type} {}
 };
 
 class BaseNode {
@@ -23,19 +20,13 @@ public:
     /**
      * Constructor - Initialize header
      */
-    BaseNode(NodeType node_type, int item_count) : header_{node_type, item_count} {}
+    BaseNode(NodeType node_type) : header_{node_type} {}
 
     /**
      *
      * @return The type of the node
      */
     NodeType GetType() const { return header_.node_type_; }
-
-    /**
-     *
-     * @return The count of key-value entries in this node
-     */
-    int GetSize() const { return header_.item_count_; }
 
     /**
      *
@@ -87,8 +78,7 @@ public:
     /**
      * Constructor
      */
-    ElasticNode(int size, NodeType node_type, int item_count) :
-            BaseNode(node_type, item_count), size_{size} {}
+    ElasticNode(int size, NodeType node_type) : BaseNode(node_type), size_{size} {}
 
     /**
      *

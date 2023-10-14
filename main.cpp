@@ -10,12 +10,12 @@ public:
     NodeType node_type_;
 
     /** Count of key-value pairs in this node */
-    int size_;
+    int item_count_;
 
     /**
      * Constructor
      */
-    NodeHeader(NodeType node_type, int size) : node_type_{node_type}, size_{size} {}
+    NodeHeader(NodeType node_type, int item_count) : node_type_{node_type}, item_count_{item_count} {}
 };
 
 class BaseNode {
@@ -23,7 +23,7 @@ public:
     /**
      * Constructor - Initialize header
      */
-    BaseNode(NodeType node_type, int size) : header_{node_type, size} {}
+    BaseNode(NodeType node_type, int item_count) : header_{node_type, item_count} {}
 
     /**
      *
@@ -35,7 +35,7 @@ public:
      *
      * @return The count of key-value entries in this node
      */
-    int GetSize() const { return header_.size_; }
+    int GetSize() const { return header_.item_count_; }
 
     /**
      *

@@ -1,5 +1,4 @@
 #include <iostream>
-#include <cmath>
 
 enum class NodeType : int {
     InternalNode = 0, LeafNode = 1

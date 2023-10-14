@@ -64,6 +64,51 @@ private:
     NodeHeader header_;
 };
 
+/*
+ * The base class of elastic node types - `InternalNode` & `LeafNode`
+ */
+template<typename ElementType>
+class ElasticNode : public BaseNode {
+private:
+    /**
+     * The length of the `data_` array
+     */
+    int size_;
+
+    /**
+     * Compiler voodoo (struct hack aka flexible array member):
+     * https://developers.redhat.com/articles/2022/09/29/benefits-limitations-flexible-array-members
+     *
+     * The data array will be allocated separately
+     */
+    ElementType data_[0];
+
+public:
+    /**
+     * Constructor
+     */
+    ElasticNode(int size, NodeType node_type, int item_count) :
+            BaseNode(node_type, item_count), size_{size} {}
+
+    /**
+     *
+     * @return The length of the `data_` array
+     */
+    int GetSize() const { return size_; }
+
+    static ElasticNode *Get(int size, NodeType node_type, int item_count) {
+        auto *alloc_base = new char[sizeof(ElasticNode) + size * sizeof(ElementType)];
+
+        auto elastic_node = reinterpret_cast<ElasticNode *>(alloc_base);
+        /**
+         * Placement new: See https://en.cppreference.com/w/cpp/language/new#Placement_new
+         */
+        new(elastic_node) ElasticNode{size, node_type, item_count};
+
+        return elastic_node;
+    }
+};
+
 class BPlusTreeBase {
 public:
     /**

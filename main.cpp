@@ -4,35 +4,18 @@ enum class NodeType : int {
     InternalNode = 0, LeafNode = 1
 };
 
-class NodeHeader {
-public:
-    /** The type of the node */
-    NodeType node_type_;
-
-    /**
-     * Constructor
-     */
-    NodeHeader(NodeType node_type) : node_type_{node_type} {}
-};
-
 class BaseNode {
 public:
     /**
      * Constructor - Initialize header
      */
-    BaseNode(NodeType node_type) : header_{node_type} {}
+    BaseNode(NodeType node_type) : node_type_{node_type} {}
 
     /**
      *
      * @return The type of the node
      */
-    NodeType GetType() const { return header_.node_type_; }
-
-    /**
-     *
-     * @return A const reference to the header of the node
-     */
-    const NodeHeader &GetNodeHeader() const { return header_; }
+    NodeType GetType() const { return node_type_; }
 
     /**
      *
@@ -47,12 +30,8 @@ public:
     bool IsInternalNode() const { return GetType() == NodeType::InternalNode; }
 
 private:
-    /**
-     * The header contains:
-     * 1. type of the node
-     * 2. count of key-value entries
-     */
-    NodeHeader header_;
+    /** The type of the node */
+    NodeType node_type_;
 };
 
 /*

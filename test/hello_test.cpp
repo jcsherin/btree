@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include "../src/btree.h"
 
 // Demonstrate some basic assertions.
 TEST(HelloTest, BasicAssertions) {
@@ -6,4 +7,7 @@ TEST(HelloTest, BasicAssertions) {
     EXPECT_STRNE("hello", "world");
 // Expect equality.
     EXPECT_EQ(7 * 6, 42);
+
+    auto leaf = ElasticNode<int>(5, NodeType::LeafNode);
+    EXPECT_TRUE(leaf.IsInternalNode());
 }

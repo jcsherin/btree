@@ -1,4 +1,6 @@
-#include <iostream>
+
+#ifndef BTREE_BTREE_H
+#define BTREE_BTREE_H
 
 enum class NodeType : int {
     InternalNode = 0, LeafNode = 1
@@ -146,9 +148,4 @@ private:
     int leaf_node_min_size_ = 64; /** ⌈(fanout - 1) / 2⌉ */
 };
 
-int main() {
-    auto elastic_node = ElasticNode<std::pair<int, int>>::Get(10, NodeType::LeafNode);
-    elastic_node->FreeElasticNode();
-
-    return 0;
-}
+#endif //BTREE_BTREE_H

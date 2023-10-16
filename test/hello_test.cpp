@@ -9,5 +9,6 @@ TEST(HelloTest, BasicAssertions) {
     EXPECT_EQ(7 * 6, 42);
 
     auto leaf = ElasticNode<int>(5, NodeType::LeafNode);
-    EXPECT_TRUE(leaf.IsInternalNode());
+    EXPECT_FALSE(leaf.IsInternalNode());
+    EXPECT_TRUE(leaf.IsLeafNode());
 }

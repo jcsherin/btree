@@ -7,4 +7,5 @@ Todos:
 - [ ] Crab latching (optimistic) protocol
 - [ ] Forward Iterator
 - [ ] Reverse Iterator
- 
+- [ ] Guard for ensuring `ElasticNode::FreeElasticNode` always gets 
+  called

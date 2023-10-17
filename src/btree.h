@@ -160,6 +160,19 @@ public:
      */
     ~BPlusTree() {}
 
+    /**
+     *
+     * @param key
+     * @param value
+     * @return true on successful insertion, false otherwise
+     *
+     * Support only for unique keys. If the key already exists in the index
+     * the insertion will not be performed and will return false.
+     */
+    auto Insert(int key, int value) -> bool {
+        return false;
+    }
+
 private:
     BaseNode *root_;
     uint64_t num_keys_;

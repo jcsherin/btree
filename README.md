@@ -9,6 +9,7 @@ Todos:
 - [ ] Reverse Iterator
 - [ ] Guard for ensuring `ElasticNode::FreeElasticNode` always gets 
   called
+- [ ] Add an always assert macro for debugging
 
 
 Notes:

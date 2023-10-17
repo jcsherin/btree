@@ -148,4 +148,21 @@ private:
     int leaf_node_min_size_ = 64; /** ⌈(fanout - 1) / 2⌉ */
 };
 
+class BPlusTree : public BPlusTreeBase {
+public:
+    /**
+     * Constructor
+     */
+    explicit BPlusTree() : BPlusTreeBase(), root_{nullptr}, num_keys_{0} {}
+
+    /**
+     * Destructor
+     */
+    ~BPlusTree() {}
+
+private:
+    BaseNode *root_;
+    uint64_t num_keys_;
+};
+
 #endif //BTREE_BTREE_H

@@ -2,6 +2,8 @@
 #ifndef BTREE_BTREE_H
 #define BTREE_BTREE_H
 
+#include "macros.h"
+
 enum class NodeType : int {
     InternalNode = 0, LeafNode = 1
 };
@@ -170,6 +172,7 @@ public:
      * the insertion will not be performed and will return false.
      */
     auto Insert(int key, int value) -> bool {
+        BTREE_ASSERT(true, "testing always assertion");
         return false;
     }
 

@@ -1,9 +1,11 @@
 #include <iostream>
-#include "btree.h"
+#include "bplustree.h"
+
+using bplustree::BaseNode;
+using bplustree::NodeType;
 
 int main() {
-    auto tree = BPlusTree();
-    tree.Insert(1, 1);
-
+    auto node = BaseNode(NodeType::InnerType, 100);
+    std::cout << static_cast<int>(node.GetType()) << std::endl;
     return 0;
 }

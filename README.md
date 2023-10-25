@@ -9,8 +9,9 @@ Todos:
 - [ ] Reverse Iterator
 - [ ] Guard for ensuring `ElasticNode::FreeElasticNode` always gets 
   called
-- [ ] Add an always assert macro for debugging
-
+- [ ] Add macros
+  - [ ] Always assert
+  - [ ] Logger
 
 Notes:
 1. Condition for node splits?

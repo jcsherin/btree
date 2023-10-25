@@ -27,7 +27,8 @@ namespace bplustree {
     class ElasticNode : public BaseNode {
     public:
         ElasticNode(NodeType p_type, int p_max_size) :
-                BaseNode(p_type, p_max_size) {}
+                BaseNode(p_type, p_max_size),
+                end_{start_} {}
 
         /**
          * Static helper to allocate storage for an elastic node.
@@ -53,12 +54,34 @@ namespace bplustree {
             delete[] reinterpret_cast<char *>(alloc);
         }
 
+        /**
+         *
+         * @return a begin iterator to the internal array
+         */
+        ElementType *Begin() { return start_; }
+
+        const ElementType *Begin() const { return start_; }
+
+        /**
+         *
+         * @return an end iterator to the internal array
+         */
+        ElementType *End() { return end_; }
+
+        const ElementType *End() const { return end_; }
     private:
         /*
          * Struct hack (flexible array member)
          * https://developers.redhat.com/articles/2022/09/29/benefits-limitations-flexible-array-members
+         *
+         * The array for holding the key-value elements
          */
         ElementType start_[0];
+
+        /**
+         * End of the array holding the key-value elements
+         */
+        ElementType *end_;
     };
 
     using KeyNodePointerPair = std::pair<int, BaseNode *>;

@@ -1,6 +1,8 @@
 #ifndef BPLUSTREE_H
 #define BPLUSTREE_H
 
+#include <utility>
+
 namespace bplustree {
     enum class NodeType : int {
         InnerType = 0, LeafType = 1
@@ -59,6 +61,48 @@ namespace bplustree {
         ElementType start_[0];
     };
 
+    using KeyNodePointerPair = std::pair<int, BaseNode *>;
+
+    class InnerNode : public ElasticNode<KeyNodePointerPair> {
+    public:
+        /**
+         * Use the `ElasticNode` interface for constructing an `InnerNode`
+         */
+        InnerNode() = delete;
+
+        InnerNode(const InnerNode &) = delete;
+
+        InnerNode &operator=(const InnerNode &) = delete;
+
+        InnerNode(InnerNode &&) = delete;
+
+        InnerNode &operator=(InnerNode &&) = delete;
+
+        ~InnerNode() {
+            this->~ElasticNode<KeyNodePointerPair>();
+        }
+    };
+
+    using KeyValuePair = std::pair<int, int>;
+
+    class LeafNode : public ElasticNode<KeyValuePair> {
+        /**
+         * Use the `ElasticNode` interface for constructing an `LeafNode`
+         */
+        LeafNode() = delete;
+
+        LeafNode(const LeafNode &) = delete;
+
+        LeafNode &operator=(const LeafNode &) = delete;
+
+        LeafNode(LeafNode &&) = delete;
+
+        LeafNode &operator=(LeafNode &&) = delete;
+
+        ~LeafNode() {
+            this->~ElasticNode<KeyValuePair>();
+        }
+    };
 
 }
 #endif //BPLUSTREE_H

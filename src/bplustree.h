@@ -115,6 +115,20 @@ namespace bplustree {
              */
         }
 
+        /**
+         *
+         * @param key
+         * @param value
+         * @return true when insert is successful, false otherwise
+         *
+         * No support for duplicate keys. When a key already exists in the
+         * tree the insertion will not overwrite the existing key, and will
+         * return false.
+         */
+        bool Insert(int key, int value) {
+            return false;
+        }
+
     private:
         BaseNode *root_;
     };

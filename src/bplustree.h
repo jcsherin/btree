@@ -104,5 +104,20 @@ namespace bplustree {
         }
     };
 
+    class BPlusTree {
+    public:
+        explicit BPlusTree() :
+                root_{nullptr} {}
+
+        ~BPlusTree() {
+            /**
+             * TODO: Free all the nodes in the tree
+             */
+        }
+
+    private:
+        BaseNode *root_;
+    };
+
 }
 #endif //BPLUSTREE_H

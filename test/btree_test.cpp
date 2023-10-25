@@ -1,15 +1,13 @@
 #include <gtest/gtest.h>
-#include "../src/btree.h"
+#include "../src/bplustree.h"
 
-// Demonstrate some basic assertions.
-TEST(BtreeTest, LeafNodeType) {
-    auto leaf = ElasticNode<int>(5, NodeType::LeafNode);
-    EXPECT_FALSE(leaf.IsInternalNode());
-    EXPECT_TRUE(leaf.IsLeafNode());
-}
+using bplustree::NodeType;
+using bplustree::ElasticNode;
 
-TEST(BtreeTest, InternalNodeType) {
-    auto inner = ElasticNode<int>(5, NodeType::InternalNode);
-    EXPECT_FALSE(inner.IsLeafNode());
-    EXPECT_TRUE(inner.IsInternalNode());
+TEST(BPlusTreeTest, NodeTypes) {
+    auto leaf = ElasticNode<int>(NodeType::LeafType, 5);
+    EXPECT_TRUE(leaf.GetType() == NodeType::LeafType);
+
+    auto inner = ElasticNode<int>(NodeType::InnerType, 5);
+    EXPECT_TRUE(inner.GetType() == NodeType::InnerType);
 }

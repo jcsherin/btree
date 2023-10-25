@@ -129,8 +129,10 @@ namespace bplustree {
 
     class BPlusTree {
     public:
-        explicit BPlusTree() :
-                root_{nullptr} {}
+        explicit BPlusTree(int p_inner_node_max_size, int p_leaf_node_max_size) :
+                root_{nullptr},
+                inner_node_max_size_{p_inner_node_max_size},
+                leaf_node_max_size_{p_leaf_node_max_size} {}
 
         ~BPlusTree() {
             /**
@@ -154,6 +156,8 @@ namespace bplustree {
 
     private:
         BaseNode *root_;
+        int inner_node_max_size_;
+        int leaf_node_max_size_;
     };
 
 }

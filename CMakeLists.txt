@@ -4,3 +4,5 @@ project(btree)
 set(CMAKE_CXX_STANDARD 17)
 
 add_subdirectory(test)
+
+add_executable(main src/btree.h src/main.cpp)

@@ -12,15 +12,15 @@ namespace bplustree {
     public:
         BaseNode(NodeType p_type, int p_max_size) :
                 type_{p_type},
-                max_size_{p_max_size},
-                curr_size_{0} {}
+                max_size_{p_max_size} {}
 
         NodeType GetType() { return type_; }
+
+        int GetMaxSize() { return max_size_; }
 
     private:
         NodeType type_;
         int max_size_;
-        int curr_size_;
     };
 
     template<typename ElementType>

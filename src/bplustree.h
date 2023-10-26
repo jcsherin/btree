@@ -56,6 +56,8 @@ namespace bplustree {
 
         ElementType *Begin() { return start_; }
 
+        ElementType *End() { return start_ + current_size_; }
+
         int GetOffset(ElementType *location) { return location - start_; }
 
         int GetCurrentSize() { return current_size_; }
@@ -134,8 +136,10 @@ namespace bplustree {
 
         int FindLocation(const int key) {
             KeyValuePair dummy = std::make_pair(key, 0);
-            KeyValuePair *iter = std::lower_bound(this->Begin(), this->Begin(), dummy,
-                                                  [](const auto &a, const auto &b) { return a < b; });
+            KeyValuePair *iter = std::lower_bound(this->Begin(), this->End(), dummy,
+                                                  [](const auto &a, const auto &b) {
+                                                      return a < b;
+                                                  });
             return this->GetOffset(iter);
         }
     };

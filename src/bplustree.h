@@ -76,6 +76,8 @@ namespace bplustree {
         }
 
     private:
+        int current_size_;
+
         /*
          * Struct hack (flexible array member)
          * https://developers.redhat.com/articles/2022/09/29/benefits-limitations-flexible-array-members
@@ -83,8 +85,6 @@ namespace bplustree {
          * The array for holding the key-value elements
          */
         ElementType start_[0];
-
-        int current_size_;
     };
 
     using KeyNodePointerPair = std::pair<int, BaseNode *>;

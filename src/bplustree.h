@@ -54,6 +54,27 @@ namespace bplustree {
             delete[] reinterpret_cast<char *>(alloc);
         }
 
+        ElementType *Begin() { return start_; }
+
+        int GetOffset(ElementType *location) { return location - start_; }
+
+        int GetCurrentSize() { return current_size_; }
+
+        bool InsertElementIfPossible(ElementType element, int offset) {
+            if (offset >= GetMaxSize()) {
+                std::cout << "leaf size limit reached: " <<
+                          offset << " / " << GetMaxSize()
+                          << std::endl;
+                return false;
+            }
+            current_size_ = current_size_ + 1;
+            std::cout << "Insert if possible key: " << element.first
+                      << " at offset: " << offset
+                      << " current occupancy: (" << GetCurrentSize() << " of " << GetMaxSize() << ")"
+                      << std::endl;
+            return false;
+        }
+
     private:
         /*
          * Struct hack (flexible array member)
@@ -142,7 +163,18 @@ namespace bplustree {
          * tree the insertion will not overwrite the existing key, and will
          * return false.
          */
-        bool Insert(int key, int value) {
+        bool Insert(const KeyValuePair element) {
+            /**
+             * If the B+tree is empty, then create an empty leaf node
+             */
+            if (root_ == nullptr) {
+                root_ = ElasticNode<KeyValuePair>::Get(NodeType::LeafType, leaf_node_max_size_);
+            }
+
+            auto current_node = reinterpret_cast<LeafNode *>(root_);
+            auto location_greater_key_leaf = current_node->FindLocation(element.first);
+            current_node->InsertElementIfPossible(element, location_greater_key_leaf);
+
             return false;
         }
 

@@ -69,11 +69,16 @@ namespace bplustree {
                           << std::endl;
                 return false;
             }
+
+            for (int i = GetCurrentSize(); i > offset; --i) {
+                start_[i] = start_[i - 1];
+            }
+            start_[offset] = ElementType{element};
+            std::cout << "Inserted at: " << offset << " key: " << start_[offset].first << std::endl;
+
             current_size_ = current_size_ + 1;
-            std::cout << "Insert if possible key: " << element.first
-                      << " at offset: " << offset
-                      << " current occupancy: (" << GetCurrentSize() << " of " << GetMaxSize() << ")"
-                      << std::endl;
+            std::cout << "current size is now: " << current_size_ << std::endl;
+
             return false;
         }
 

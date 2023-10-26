@@ -28,7 +28,7 @@ namespace bplustree {
     public:
         ElasticNode(NodeType p_type, int p_max_size) :
                 BaseNode(p_type, p_max_size),
-                end_{start_} {}
+                current_size_{0} {}
 
         /**
          * Static helper to allocate storage for an elastic node.
@@ -63,10 +63,7 @@ namespace bplustree {
          */
         ElementType start_[0];
 
-        /**
-         * End of the array holding the key-value elements
-         */
-        ElementType *end_;
+        int current_size_;
     };
 
     using KeyNodePointerPair = std::pair<int, BaseNode *>;

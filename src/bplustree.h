@@ -110,6 +110,13 @@ namespace bplustree {
         ~LeafNode() {
             this->~ElasticNode<KeyValuePair>();
         }
+
+        int FindLocation(const int key) {
+            KeyValuePair dummy = std::make_pair(key, 0);
+            KeyValuePair *iter = std::lower_bound(this->Begin(), this->Begin(), dummy,
+                                                  [](const auto &a, const auto &b) { return a < b; });
+            return this->GetOffset(iter);
+        }
     };
 
     class BPlusTree {

@@ -62,6 +62,12 @@ namespace bplustree {
 
         int GetCurrentSize() { return current_size_; }
 
+        /**
+         *
+         * @param element
+         * @param offset index at which to insert the element
+         * @return true if element inserted into node, false if node is full
+         */
         bool InsertElementIfPossible(ElementType element, int offset) {
             if (offset >= GetMaxSize()) {
                 std::cout << "leaf size limit reached: " <<
@@ -70,6 +76,9 @@ namespace bplustree {
                 return false;
             }
 
+            /**
+             * TODO: rewrite using `std::memmove`
+             */
             for (int i = GetCurrentSize(); i > offset; --i) {
                 start_[i] = start_[i - 1];
             }

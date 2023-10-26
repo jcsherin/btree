@@ -54,21 +54,6 @@ namespace bplustree {
             delete[] reinterpret_cast<char *>(alloc);
         }
 
-        /**
-         *
-         * @return a begin iterator to the internal array
-         */
-        ElementType *Begin() { return start_; }
-
-        const ElementType *Begin() const { return start_; }
-
-        /**
-         *
-         * @return an end iterator to the internal array
-         */
-        ElementType *End() { return end_; }
-
-        const ElementType *End() const { return end_; }
     private:
         /*
          * Struct hack (flexible array member)
@@ -108,7 +93,10 @@ namespace bplustree {
 
     using KeyValuePair = std::pair<int, int>;
 
+    class BPlusTree;
+
     class LeafNode : public ElasticNode<KeyValuePair> {
+    public:
         /**
          * Use the `ElasticNode` interface for constructing an `LeafNode`
          */

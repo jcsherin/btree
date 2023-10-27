@@ -62,6 +62,9 @@ namespace bplustree {
 
         int GetCurrentSize() { return current_size_; }
 
+        // assert index < max_size_
+        ElementType &At(const int index) { return *(Begin() + index); }
+
         /**
          *
          * @param element

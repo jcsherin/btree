@@ -70,9 +70,6 @@ namespace bplustree {
          */
         bool InsertElementIfPossible(ElementType element, int offset) {
             if (GetCurrentSize() >= GetMaxSize()) {
-                std::cout << "leaf size limit reached: " <<
-                          GetCurrentSize() << " / " << GetMaxSize()
-                          << std::endl;
                 return false;
             }
 
@@ -82,11 +79,9 @@ namespace bplustree {
             for (int i = GetCurrentSize(); i > offset; --i) {
                 start_[i] = start_[i - 1];
             }
-            start_[offset] = ElementType{element};
-            std::cout << "Inserted at: " << offset << " key: " << start_[offset].first << std::endl;
 
+            start_[offset] = ElementType{element};
             current_size_ = current_size_ + 1;
-            std::cout << "current size is now: " << current_size_ << std::endl;
 
             return false;
         }

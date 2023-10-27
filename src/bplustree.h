@@ -56,9 +56,9 @@ namespace bplustree {
 
         ElementType *Begin() { return start_; }
 
-        ElementType *End() { return start_ + current_size_; }
+        ElementType *End() { return Begin() + GetCurrentSize(); }
 
-        int GetOffset(ElementType *location) { return location - start_; }
+        int GetOffset(ElementType *location) { return location - Begin(); }
 
         int GetCurrentSize() { return current_size_; }
 

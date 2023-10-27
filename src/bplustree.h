@@ -65,28 +65,35 @@ namespace bplustree {
         // assert index < max_size_
         ElementType &At(const int index) { return *(Begin() + index); }
 
-        /**
-         *
-         * @param element
-         * @param offset index at which to insert the element
-         * @return true if element inserted into node, false if node is full
-         */
-        bool InsertElementIfPossible(ElementType element, int offset) {
-            if (GetCurrentSize() >= GetMaxSize()) {
-                return false;
+        bool InsertElementIfPossible(NodeType node_type, ElementType element, const int index) {
+            /**
+             * TODO: Avoid having to check node type here
+             */
+            switch (node_type) {
+                case NodeType::LeafType:
+                    // Each leaf node can contain at most N-1 values
+                    if (GetCurrentSize() >= GetMaxSize() - 1) return false;
+                case NodeType::InnerType:
+                    return false;
             }
 
             /**
-             * TODO: rewrite using `std::memmove`
+             * To insert an element at the given index all the elements have
+             * to be relocated to the right by 1. To copy the elements over
+             * correctly, the traversal should begin from the end of the
+             * internal array.
+             *
+             * TODO: Maybe use `std::memmove` here instead!
              */
-            for (int i = GetCurrentSize(); i > offset; --i) {
-                start_[i] = start_[i - 1];
+            for (int i = GetCurrentSize() - 1; i >= index; --i) {
+                start_[i + 1] = start_[i];
             }
 
-            start_[offset] = ElementType{element};
+            // Place the element at index
+            new(start_ + index) ElementType{element};
             current_size_ = current_size_ + 1;
 
-            return false;
+            return true;
         }
 
     private:

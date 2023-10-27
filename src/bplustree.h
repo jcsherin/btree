@@ -203,16 +203,33 @@ namespace bplustree {
          * return false.
          */
         bool Insert(const KeyValuePair element) {
-            /**
-             * If the B+tree is empty, then create an empty leaf node
-             */
             if (root_ == nullptr) {
+                // Create an empty leaf node, which is also the root
                 root_ = ElasticNode<KeyValuePair>::Get(NodeType::LeafType, leaf_node_max_size_);
             }
 
-            auto current_node = reinterpret_cast<LeafNode *>(root_);
-            auto location_greater_key_leaf = current_node->FindLocation(element.first);
-            current_node->InsertElementIfPossible(element, location_greater_key_leaf);
+            BaseNode *current_node = root_;
+            auto key = element.first;
+
+            // Traversing down the tree to find the leaf node where the
+            // key-value element can be inserted
+            while (current_node->GetType() != NodeType::LeafType) {
+                auto node = reinterpret_cast<InnerNode *>(current_node);
+
+                auto node_index = node->FindLocation(key);
+                auto guide_node = node->At(node_index);
+                if (key < guide_node.first) {
+                    // The most common case where we traverse down the left
+                    // node pointer.
+                    current_node = node->At(node_index - 1).second;
+                } else {
+                    // Traversing down the right node pointer. This will
+                    // only happen when the key of the element to be inserted
+                    // compares greater than the key at the rightmost end
+                    // of the current inner node.
+                    current_node = guide_node.second;
+                }
+            }
 
             return false;
         }

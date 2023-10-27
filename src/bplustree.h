@@ -238,6 +238,13 @@ namespace bplustree {
                 }
             }
 
+            auto node = reinterpret_cast<LeafNode *>(current_node);
+            auto index_greater_key_leaf = node->FindLocation(key);
+            if (node->InsertElementIfPossible(NodeType::LeafType, element, index_greater_key_leaf)) {
+                return true;
+            }
+
+            // Leaf node has to split
             return false;
         }
 

@@ -25,3 +25,23 @@ Notes:
     2. The same choice exists for internal nodes. Perform the split 
        before or after reaching the max size of the node on inserting a 
        key-pointer pair.
+
+### Build
+```
+mkdir build
+cd build
+
+cmake -DCMAKE_BUILD_TYPE=Debug ..
+cmake --build .
+
+cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake --build .
+
+cmake --build . --target <name> // builds only the named targets
+```
+
+### Tests
+Run build before this.
+```
+./test/btree_test
+```

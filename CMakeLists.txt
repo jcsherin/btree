@@ -5,4 +5,4 @@ set(CMAKE_CXX_STANDARD 17)
 
 add_subdirectory(test)
 
-add_executable(main src/bplustree.h src/main.cpp)
+add_executable(main src/bplustree.h src/macros.h src/main.cpp)

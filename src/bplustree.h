@@ -225,18 +225,19 @@ namespace bplustree {
             while (current_node->GetType() != NodeType::LeafType) {
                 auto node = reinterpret_cast<InnerNode *>(current_node);
 
-                auto node_index = node->FindLocation(key);
-                auto guide_node = node->At(node_index);
-                if (key < guide_node.first) {
-                    // The most common case where we traverse down the left
+                auto greater_key_index_inner = node->FindLocation(key);
+                auto element_inner = node->At(greater_key_index_inner);
+                if (key < element_inner.first) {
+                    // The most common case where we traverse down the left_element_inner
                     // node pointer.
-                    current_node = node->At(node_index - 1).second;
+                    auto left_element_inner = node->At(greater_key_index_inner - 1);
+                    current_node = left_element_inner.second;
                 } else {
                     // Traversing down the right node pointer. This will
                     // only happen when the key of the element to be inserted
                     // compares greater than the key at the rightmost end
                     // of the current inner node.
-                    current_node = guide_node.second;
+                    current_node = element_inner.second;
                 }
             }
 

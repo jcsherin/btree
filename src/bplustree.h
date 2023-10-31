@@ -233,6 +233,10 @@ namespace bplustree {
 
             auto node = reinterpret_cast<LeafNode *>(current_node);
             auto index_greater_key_leaf = node->FindLocation(key);
+            // Proceed further only if this is not an already existing key
+            if (element.first == node->At(index_greater_key_leaf).first) {
+                return false;
+            }
             if (node->InsertElementIfPossible(element, index_greater_key_leaf)) {
                 return true;
             }

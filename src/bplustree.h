@@ -73,8 +73,10 @@ namespace bplustree {
                 case NodeType::LeafType:
                     // Each leaf node can contain at most N-1 values
                     if (GetCurrentSize() >= GetMaxSize() - 1) return false;
+                    break;
                 case NodeType::InnerType:
                     return false;
+                    break;
             }
 
             /**

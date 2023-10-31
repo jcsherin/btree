@@ -1,16 +1,24 @@
 Todos:
 - [ ] Insert key-value
-- [ ] Setup tests
+  - [x] Root/leaf
+  - [x] Disallow duplicate key insertion in leaf
+  - [x] Insert up to leaf capacity
+  - [ ] Split nodes
+    - [ ] Leaf
+    - [ ] Inner
+    - [ ] Root
+  - [ ] Crab latching (optimistic)
+  - [ ] Crab latching (pessimistic)
+  - [ ] Insert tests
 - [ ] Find key (point query)
 - [ ] Find key within bounds (range query)
 - [ ] Delete key-value
-- [ ] Crab latching (optimistic) protocol
 - [ ] Forward Iterator
 - [ ] Reverse Iterator
 - [ ] Guard for ensuring `ElasticNode::FreeElasticNode` always gets 
   called
 - [ ] Add macros
-  - [ ] Always assert
+  - [x] Always assert
   - [ ] Logger
 
 Notes:

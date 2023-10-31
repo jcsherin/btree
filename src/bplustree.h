@@ -65,20 +65,10 @@ namespace bplustree {
         // assert index < max_size_
         ElementType &At(const int index) { return *(Begin() + index); }
 
-        bool InsertElementIfPossible(NodeType node_type, ElementType element, const int index) {
-            /**
-             * TODO: Avoid having to check node type here
-             */
-            switch (node_type) {
-                case NodeType::LeafType:
-                    // Each leaf node can contain at most N-1 values
-                    if (GetCurrentSize() >= GetMaxSize() - 1) return false;
-                    break;
-                case NodeType::InnerType:
-                    return false;
-                    break;
+        bool InsertElementIfPossible(ElementType element, const int index) {
+            if (GetCurrentSize() >= GetMaxSize()) {
+                return false;
             }
-
             /**
              * To insert an element at the given index all the elements have
              * to be relocated to the right by 1. To copy the elements over
@@ -243,7 +233,7 @@ namespace bplustree {
 
             auto node = reinterpret_cast<LeafNode *>(current_node);
             auto index_greater_key_leaf = node->FindLocation(key);
-            if (node->InsertElementIfPossible(NodeType::LeafType, element, index_greater_key_leaf)) {
+            if (node->InsertElementIfPossible(element, index_greater_key_leaf)) {
                 return true;
             }
 

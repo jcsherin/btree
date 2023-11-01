@@ -43,20 +43,23 @@ namespace bplustree {
             ElasticNode *new_node = this->Get(this->GetType(), this->sibling_left_, this->sibling_right_,
                                               this->GetMaxSize());
 
-            std::cout << "(pre copy) New node, current size: " << new_node->GetCurrentSize();
-            std::cout << "(pre copy) Old node, current size: " << this->GetCurrentSize();
+            std::cout << "(pre copy) New node, current size: " << new_node->GetCurrentSize() << std::endl;
+            std::cout << "(pre copy) Old node, current size: " << this->GetCurrentSize() << std::endl;
 
-            int copy_from_index = Begin() + FastCeilIntDivision(this->GetCurrentSize(), 2);
-            for (int i = 0, j = copy_from_index; j != this->GetCurrentSize(); ++i, ++j) {
-                std::cout << "Copy from: " << j << " to: " << i << " key: " << this->start_[j] << std::endl;
+            int copy_from_index = FastCeilIntDivision(this->GetCurrentSize(), 2);
+            int copied_count{0};
+            for (int i = 0, j = copy_from_index; j < this->GetCurrentSize(); ++i, ++j) {
+                std::cout << "Copy from: " << j << " to: " << i << " key: " << this->start_[j].first << std::endl;
                 new_node->start_[i] = this->start_[j];
 
                 // Adjust array size after copying
-                new_node->current_size_++;
-                this->current_size_--;
+                ++copied_count;
             }
-            std::cout << "(post copy) New node, current size: " << new_node->GetCurrentSize();
-            std::cout << "(post copy) Old node, current size: " << this->GetCurrentSize();
+            new_node->current_size_ = new_node->current_size_ + copied_count;
+            this->current_size_ = this->current_size_ - copied_count;
+            std::cout << "copied count: " << copied_count << std::endl;
+            std::cout << "(post copy) New node, current size: " << new_node->GetCurrentSize() << std::endl;
+            std::cout << "(post copy) Old node, current size: " << this->GetCurrentSize() << std::endl;
 
             return new_node;
         }
@@ -130,6 +133,14 @@ namespace bplustree {
 
             return true;
         }
+
+        BaseNode *GetSiblingLeft() { return sibling_left_; }
+
+        BaseNode *GetSiblingRight() { return sibling_right_; }
+
+        void SetSiblingLeft(BaseNode *node) { sibling_left_ = node; }
+
+        void SetSiblingRight(BaseNode *node) { sibling_right_ = node; }
 
     private:
         /**
@@ -304,6 +315,29 @@ namespace bplustree {
             }
 
             // Leaf node has to split
+            auto splitted_node = node->SplitNode();
+            auto splitted_node_begin = splitted_node->Begin();
+            if (splitted_node_begin->first > element.first) {
+                auto insert_location = static_cast<LeafNode *>(node)->FindLocation(element.first);
+                node->InsertElementIfPossible(element, insert_location);
+
+                std::cout << "Inserted key: " << element.first << " at: " << insert_location
+                          << " in older(of split) node." << std::endl;
+                node->InsertElementIfPossible(element, static_cast<LeafNode *>(node)->FindLocation(element.first));
+            } else {
+                auto insert_location = static_cast<LeafNode *>(splitted_node)->FindLocation(element.first);
+
+                std::cout << "Inserted key: " << element.first << " at: " << insert_location
+                          << " in newly split node." << std::endl;
+            }
+
+            // Set sibling pointers correctly
+            splitted_node->SetSiblingLeft(node);
+            splitted_node->SetSiblingRight(node->GetSiblingRight());
+            node->SetSiblingRight(splitted_node);
+
+            // Create a new root node
+
             return false;
         }
 

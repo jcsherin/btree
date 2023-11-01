@@ -2,6 +2,7 @@
 #define BPLUSTREE_H
 
 #include <utility>
+#include "macros.h"
 
 namespace bplustree {
     enum class NodeType : int {
@@ -88,6 +89,21 @@ namespace bplustree {
             current_size_ = current_size_ + 1;
 
             return true;
+        }
+
+    private:
+        /**
+         * Helper for minimum node occupancy calculation based on node fanout
+         * https://stackoverflow.com/questions/2745074/fast-ceiling-of-an-integer-division-in-c-c
+         *
+         * @param x
+         * @param y
+         * @return ceiling of x when divided by y
+         */
+        int FastCeilIntDivision(int x, int y) {
+            BPLUSTREE_ASSERT(x != 0, "x should be greater than zero");
+
+            return 1 + ((x - 1) / y);
         }
 
     private:

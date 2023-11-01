@@ -1,6 +1,33 @@
 #include <iostream>
 #include "bplustree.h"
 
+int FastCeilIntDivision(int x, int y) {
+    return 1 + ((x - 1) / y);
+}
+
+void print_fanout_row(int fanout, int fanout_max) {
+    std::cout << "fanout: " << fanout
+              << " max: " << fanout_max
+              << " min: " << fanout_max / 2
+              << " ceil(min): " << (fanout_max + 2 - 1) / 2
+              << " ceil(min no-overflow): " << FastCeilIntDivision(fanout_max, 2)
+              << std::endl;
+}
+
+void print_fanout() {
+    int i = 2;
+    while (i <= 1024) {
+        print_fanout_row(i, i - 1); // even
+        print_fanout_row(i + 1, i + 1 - 1); // odd
+
+        if (i > 2) {
+            i *= 2;
+        } else {
+            i = 8;
+        }
+    }
+}
+
 int main() {
     auto tree = bplustree::BPlusTree(4, 4);
     tree.Insert(std::make_pair(150, 456));
@@ -17,24 +44,6 @@ int main() {
     tree.Insert(std::make_pair(140, 456));
     tree.Insert(std::make_pair(135, 456));
 
-    int fanout_even = 8;
-    int fanout_even_max = fanout_even - 1;
 
-    int fanout_odd = 9;
-    int fanout_odd_max = fanout_odd - 1;
-
-    std::cout << "fanout: " << fanout_even
-              << " max: " << fanout_even_max
-              << " min: " << fanout_even_max / 2
-              << " ceil(min): " << (fanout_even_max + 2 - 1) / 2
-              << " ceil(min no-overflow): " << 1 + ((fanout_even_max - 1) / 2)
-              << std::endl;
-
-    std::cout << "fanout: " << fanout_odd
-              << " max: " << fanout_odd_max
-              << " min: " << fanout_odd_max / 2
-              << " ceil(min): " << (fanout_odd_max + 2 - 1) / 2
-              << " ceil(min no-overflow): " << 1 + ((fanout_odd_max - 1) / 2)
-              << std::endl;
     return 0;
 }

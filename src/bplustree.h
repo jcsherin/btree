@@ -33,6 +33,43 @@ namespace bplustree {
                 sibling_right_{p_sibling_right},
                 current_size_{0} {}
 
+        ElasticNode *SplitNode() {
+            // Split the node only when the addition of one more key-value
+            // pair will make the node full
+            if (!this->WillBeFullAfterInsert()) {
+                return nullptr;
+            }
+
+            ElasticNode *new_node = this->Get(this->GetType(), this->sibling_left_, this->sibling_right_,
+                                              this->GetMaxSize());
+
+            std::cout << "(pre copy) New node, current size: " << new_node->GetCurrentSize();
+            std::cout << "(pre copy) Old node, current size: " << this->GetCurrentSize();
+
+            int copy_from_index = Begin() + FastCeilIntDivision(this->GetCurrentSize(), 2);
+            for (int i = 0, j = copy_from_index; j != this->GetCurrentSize(); ++i, ++j) {
+                std::cout << "Copy from: " << j << " to: " << i << " key: " << this->start_[j] << std::endl;
+                new_node->start_[i] = this->start_[j];
+
+                // Adjust array size after copying
+                new_node->current_size_++;
+                this->current_size_--;
+            }
+            std::cout << "(post copy) New node, current size: " << new_node->GetCurrentSize();
+            std::cout << "(post copy) Old node, current size: " << this->GetCurrentSize();
+
+            return new_node;
+        }
+
+        /**
+         *
+         * @return true if adding one more element will make the node full and
+         * therefore it has to split, false otherwise
+         */
+        bool WillBeFullAfterInsert() {
+            return (this->GetCurrentSize() + 1 >= this->GetMaxSize());
+        }
+
         /**
          * Static helper to allocate storage for an elastic node.
          */
@@ -69,6 +106,9 @@ namespace bplustree {
         ElementType &At(const int index) { return *(Begin() + index); }
 
         bool InsertElementIfPossible(ElementType element, const int index) {
+            // This guard could be removed if it can be guaranteed that this
+            // method will not be called on a node which is full in the
+            // B+Tree insert method
             if (GetCurrentSize() >= GetMaxSize()) {
                 return false;
             }
@@ -259,7 +299,7 @@ namespace bplustree {
             if (element.first == node->At(index_greater_key_leaf).first) {
                 return false;
             }
-            if (node->InsertElementIfPossible(element, index_greater_key_leaf)) {
+            if (!node->WillBeFullAfterInsert() && node->InsertElementIfPossible(element, index_greater_key_leaf)) {
                 return true;
             }
 

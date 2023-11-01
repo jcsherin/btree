@@ -337,6 +337,17 @@ namespace bplustree {
             node->SetSiblingRight(splitted_node);
 
             // Create a new root node
+            root_ = ElasticNode<KeyNodePointerPair>::Get(NodeType::InnerType, nullptr, nullptr, inner_node_max_size_);
+
+            auto smallest_key_splitted_node = splitted_node->Begin()->first;
+            // a dummy key for the first slot of the internal node
+            KeyNodePointerPair p1 = std::make_pair(smallest_key_splitted_node, node);
+            KeyNodePointerPair p2 = std::make_pair(smallest_key_splitted_node, splitted_node);
+
+            auto new_root_node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(root_);
+            new_root_node->InsertElementIfPossible(p1, 0);
+            new_root_node->InsertElementIfPossible(p2, 1);
+            std::cout << "Created new root with children: " << new_root_node->GetCurrentSize() << std::endl;
 
             return false;
         }

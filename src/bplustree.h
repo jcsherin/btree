@@ -26,14 +26,16 @@ namespace bplustree {
     template<typename ElementType>
     class ElasticNode : public BaseNode {
     public:
-        ElasticNode(NodeType p_type, int p_max_size) :
+        ElasticNode(NodeType p_type, BaseNode *p_sibling_left, BaseNode *p_sibling_right, int p_max_size) :
                 BaseNode(p_type, p_max_size),
+                sibling_left_{p_sibling_left},
+                sibling_right_{p_sibling_right},
                 current_size_{0} {}
 
         /**
          * Static helper to allocate storage for an elastic node.
          */
-        static ElasticNode *Get(NodeType p_type, int p_max_size) {
+        static ElasticNode *Get(NodeType p_type, BaseNode *p_sibling_left, BaseNode *p_sibling_right, int p_max_size) {
             auto *alloc = new char[sizeof(ElasticNode) + p_max_size * sizeof(ElementType)];
 
             /**
@@ -41,7 +43,7 @@ namespace bplustree {
              * https://en.cppreference.com/w/cpp/language/new#Placement_new
              */
             auto elastic_node = reinterpret_cast<ElasticNode *>(alloc);
-            new(elastic_node) ElasticNode(p_type, p_max_size);
+            new(elastic_node) ElasticNode(p_type, p_sibling_left, p_sibling_right, p_max_size);
 
             return elastic_node;
         }
@@ -89,6 +91,11 @@ namespace bplustree {
         }
 
     private:
+        // Sibling pointers for chaining leaf nodes
+        BaseNode *sibling_left_;
+        BaseNode *sibling_right_;
+
+        // Size of the internal array `start_`
         int current_size_;
 
         /*
@@ -204,7 +211,7 @@ namespace bplustree {
         bool Insert(const KeyValuePair element) {
             if (root_ == nullptr) {
                 // Create an empty leaf node, which is also the root
-                root_ = ElasticNode<KeyValuePair>::Get(NodeType::LeafType, leaf_node_max_size_);
+                root_ = ElasticNode<KeyValuePair>::Get(NodeType::LeafType, nullptr, nullptr, leaf_node_max_size_);
             }
 
             BaseNode *current_node = root_;

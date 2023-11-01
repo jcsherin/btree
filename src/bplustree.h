@@ -215,16 +215,15 @@ namespace bplustree {
             }
 
             BaseNode *current_node = root_;
-            auto key = element.first;
 
             // Traversing down the tree to find the leaf node where the
             // key-value element can be inserted
             while (current_node->GetType() != NodeType::LeafType) {
                 auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
 
-                auto greater_key_index_inner = static_cast<InnerNode *>(node)->FindLocation(key);
+                auto greater_key_index_inner = static_cast<InnerNode *>(node)->FindLocation(element.first);
                 auto element_inner = node->At(greater_key_index_inner);
-                if (key < element_inner.first) {
+                if (element.first < element_inner.first) {
                     // The most common case where we traverse down the left_element_inner
                     // node pointer.
                     auto left_element_inner = node->At(greater_key_index_inner - 1);
@@ -239,7 +238,7 @@ namespace bplustree {
             }
 
             auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
-            auto index_greater_key_leaf = static_cast<LeafNode *>(node)->FindLocation(key);
+            auto index_greater_key_leaf = static_cast<LeafNode *>(node)->FindLocation(element.first);
             // Proceed further only if this is not an already existing key
             if (element.first == node->At(index_greater_key_leaf).first) {
                 return false;

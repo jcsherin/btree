@@ -276,6 +276,64 @@ namespace bplustree {
          * return false.
          */
         bool Insert(const KeyValuePair element) {
+            /**
+             * Sequential algorithm (no crab latching)
+             * ---------------------------------------
+             *
+             * If B+Tree is empty:
+             *      root_ = new leaf node
+             *     __Invariant__:
+             *          root_ != nullptr
+             *          root_ == NodeType::LeafType
+             * else (B+Tree is not empty):
+             *      Find leaf node to insert key-value:
+             *          __Invariant__:
+             *              root != nullptr
+             *          current_node = root_
+             *
+             *          while (current_node != NodeType::LeafType):
+             *              __Invariant__:
+             *                  current_node == NodeType::InnerType
+             *
+             *              find lower_bound for key in current_node
+             *              if index == End(): (key greater than all other keys in this node)
+             *                  traverse right most node pointer:
+             *                      current_node = current_node->storage[size - 1]->node_pointer
+             *              if key < current_node->storage[lower]->key:
+             *                  traverse left node pointer:
+             *                      current_node = current_node->storage[lower - 1]->node_pointer
+             *              if key == current_node->storage[lower]->key:
+             *                  traverse current (right) node pointer:
+             *                      current_node = current_node->storage[lower]->node_pointer
+             *     __Invariant__:
+             *          current_node == NodeType::LeafType
+             *
+             * Check if this key already exists in the leaf node:
+             *      find lower_bound for key in current_node
+             *      if key == current_node->storage[lower]->key:
+             *          return false (reason: duplicate key)
+             *     __Invariant__:
+             *          key is NOT a duplicate
+             *
+             * If leaf node does NOT have to split for this key-value INSERT:
+             *      insert key-value in current_node:
+             *          find lower_bound for key in current_node
+             *          if index == End():
+             *              insert key-value pair as the last element in node
+             *          if key < current_node->storage[lower]->key:
+             *              copy/shift key-value pairs from lower to the end by 1 index
+             *              this makes space for inserting key-value at index lower
+             *              insert key-value at current_node->storage[lower]
+             *          increment current_node.current_size by 1
+             *      return true (Simple Insert)
+             *      __Invariant__:
+             *          key is guaranteed to be unique in the current_node
+             *          after insert:
+             *              current_node.current_size <= current_node.max_size - 1
+             *
+             * __Invariant__:
+             *      current_node (leaf) has to split for this key-value INSERT
+             */
             if (root_ == nullptr) {
                 // Create an empty leaf node, which is also the root
                 root_ = ElasticNode<KeyValuePair>::Get(NodeType::LeafType, nullptr, nullptr, leaf_node_max_size_);

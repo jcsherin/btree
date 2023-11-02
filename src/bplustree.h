@@ -332,7 +332,32 @@ namespace bplustree {
              *              current_node.current_size <= current_node.max_size - 1
              *
              * __Invariant__:
-             *      current_node (leaf) has to split for this key-value INSERT
+             *      current_node.current_size + 1 == current_node.max_size
+             *      (condition for splitting the leaf node)
+             *
+             * Split leaf current_node:
+             *      create leaf node - new_node
+             *          min_size = ⌈(fanout - 1) / 2⌉
+             *          max_size = (fanout - 1)
+             *      copy half the key-value pairs from current_node to new_node
+             *          beginning at index min_size up to the end:
+             *          new_node.current_size += count_moved_key_values
+             *      erase copied key-value pairs from current_node
+             *          current_node.current_size -= count_moved_key_values
+             *      __Invariant__:
+             *          // each leaf node contains at least min_size key-values
+             *          leaf_node.current_size >= min_size ⌈(fanout - 1) / 2⌉
+             *          new_node.current_size >= min_size ⌈(fanout - 1) / 2⌉
+             *          // total key-values remain the same after redistribution
+             *          leaf_node.current_size + count_moved_key_values = new_node.current_size
+             *
+             *     Insert the key-value in current_node or new_node:
+             *         If key < smallest key in new_node:
+             *              insert key-value in current_node (same steps as earlier)
+             *         else:
+             *              insert key-value in new_node (same steps as earlier)
+             *
+             *     Insert pointer to new_node in parent of current_node
              */
             if (root_ == nullptr) {
                 // Create an empty leaf node, which is also the root

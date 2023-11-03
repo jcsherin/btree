@@ -289,11 +289,16 @@ namespace bplustree {
              *      Find leaf node to insert key-value:
              *          __Invariant__:
              *              root != nullptr
-             *          current_node = root_
+             *              current_node = root_
+             *
+             *          Initialize an empty stack for maintaining node pointers:
+             *              node_stack
              *
              *          while (current_node != NodeType::LeafType):
              *              __Invariant__:
              *                  current_node == NodeType::InnerType
+             *
+             *              node_stack.push(current_node)
              *
              *              find lower_bound for key in current_node
              *              if index == End(): (key greater than all other keys in this node)
@@ -349,15 +354,85 @@ namespace bplustree {
              *          leaf_node.current_size >= min_size ⌈(fanout - 1) / 2⌉
              *          new_node.current_size >= min_size ⌈(fanout - 1) / 2⌉
              *          // total key-values remain the same after redistribution
-             *          leaf_node.current_size + count_moved_key_values = new_node.current_size
              *
-             *     Insert the key-value in current_node or new_node:
+             *     Insert the key-value in either the current_node or new_node:
              *         If key < smallest key in new_node:
              *              insert key-value in current_node (same steps as earlier)
              *         else:
              *              insert key-value in new_node (same steps as earlier)
              *
-             *     Insert pointer to new_node in parent of current_node
+             *     Insert new_node into the leaf chain:
+             *          new_node.next_ = current_node.next_
+             *          new_node.prev_ = current_node
+             *          current_node.next_ = new_node
+             *     __Invariant__:
+             *          new_node.prev_ != nullptr (= current_node)
+             *          current_node.next_ != nullptr (= new_node)
+             *
+             *  Set insertion_finished = false
+             *  while (!insertion_finished && !node_stack.empty()):
+             *       parent_node = node_stack.pop()
+             *       smallest_key = new_node->GetFirstKey()
+             *       key_node_pointer_pair = (smallest_key, new_node)
+             *
+             *       __Invariant__:
+             *           key_node_pointer_pair.first = new_node->GetFirstKey()
+             *           key_node_pointer_pair.second = new_node
+             *
+             *       idx = find index of current_node in parent_node
+             *       if parent_node.size < parent_node.max_size:
+             *           insert key_node_pointer_pair at (idx + 1) after current_node:
+             *               relocate existing key-value pairs from (idx + 1) by 1 index to the right
+             *               insert key_node_pointer_pair at (idx + 1)
+             *           set insertion_finished = true
+             *       else split inner parent_node:
+             *          create inner node - split_inner_node
+             *              min_size = ⌈fanout/ 2⌉ - 1
+             *              max_size = fanout
+             *          copy half the key-value pairs from parent_node to split_inner_node
+             *              copy from index (min_size + 1):
+             *                  takes into account the first stored key is invalid
+             *              split_inner_node.current_size += count_moved_key_values
+             *          erase moved key-value pairs from parent_node
+             *              parent_node.current_size -= count_moved_key_values
+             *          __Invariant__:
+             *              each inner node contains at least min_size key-values
+             *              total count of key-values have not changed after split
+             *
+             *          // assumes moved values from index (min_size + 1) onwards
+             *          // to newly created inner node
+             *          if idx > min_size: (insert in split_inner_node)
+             *              idx = idx - min_size
+             *              insert key_node_pointer_pair at (idx + 1) after current_node in split_inner_node:
+             *                  relocate existing key-value pairs from (idx + 1) by 1 index to the right
+             *                  insert key_node_pointer_pair at (idx + 1) in split_inner_node
+             *              __Invariant__:
+             *                  current_node pointer moved to split_inner_node
+             *                  split_inner_node->storage[idx]->node_pointer == current_node
+             *                  split_inner_node->storage[idx+1]->node_pointer = new_node
+             *         else: (insert in parent_node)
+             *              insert key_node_pointer_pair at (idx + 1) after current_node in parent_node:
+             *                  relocate existing key-value pairs from (idx + 1) by 1 index to the right
+             *                  insert key_node_pointer_pair at (idx + 1) in parent_node
+             *              __Invariant__:
+             *                  current_node pointer in parent_node
+             *                  parent_node->storage[idx]->node_pointer == current_node
+             *                  parent_node->storage[idx+1]->node_pointer = new_node
+             *
+             *         // Unwind the stack to insert split_inner_node in its parent
+             *         current_node = parent_node
+             *         new_node = split_inner_node
+             *
+             *  if (!insertion_finished):
+             *      __Invariant__:
+             *          root node has to be split
+             *      Create a new root node containing the following key-value items:
+             *          (smallest_key_current_node, current_node)
+             *          (smallest_key_new_node, new_node)
+             *      Make this the new root of the B+tree
+             *      Set insertion_finished = true
+             *
+             * return true
              */
             if (root_ == nullptr) {
                 // Create an empty leaf node, which is also the root

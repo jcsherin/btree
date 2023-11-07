@@ -433,6 +433,7 @@ namespace bplustree {
                 return false;   // duplicate key
             }
 
+            BPLUSTREE_ASSERT(element.first != iter->first, "Inserting unique key");
             // If the leaf node will become full after inserting the current
             // key-value element then we split the leaf node
             auto leaf_will_split = node->GetCurrentSize() >= (node->GetMaxSize() - 1);
@@ -440,40 +441,28 @@ namespace bplustree {
                 return true;
             }
 
-            // Leaf node has to split
-            auto splitted_node = node->SplitNode();
-            auto splitted_node_begin = splitted_node->Begin();
-            if (splitted_node_begin->first > element.first) {
-                auto insert_location = static_cast<LeafNode *>(node)->FindLocation(element.first);
-                node->InsertElementIfPossible(element, insert_location);
+            // Split the leaf node
+            BPLUSTREE_ASSERT(node->GetCurrentSize() == (node->GetMaxSize() - 1),
+                             "node will become full after next insert");
 
-                std::cout << "Inserted key: " << element.first << " at: " << insert_location
-                          << " in older(of split) node." << std::endl;
-                node->InsertElementIfPossible(element, static_cast<LeafNode *>(node)->FindLocation(element.first));
+
+            auto split_node = node->SplitNode();
+            if (element.first < split_node->Begin()->first) {
+                node->InsertElementIfPossible(
+                        element,
+                        static_cast<LeafNode *>(node)->FindLocation(element.first)
+                );
             } else {
-                auto insert_location = static_cast<LeafNode *>(splitted_node)->FindLocation(element.first);
-
-                std::cout << "Inserted key: " << element.first << " at: " << insert_location
-                          << " in newly split node." << std::endl;
+                split_node->InsertElementIfPossible(
+                        element,
+                        static_cast<LeafNode *>(split_node)->FindLocation(element.first)
+                );
             }
 
-            // Set sibling pointers correctly
-            splitted_node->SetSiblingLeft(node);
-            splitted_node->SetSiblingRight(node->GetSiblingRight());
-            node->SetSiblingRight(splitted_node);
-
-            // Create a new root node
-            root_ = ElasticNode<KeyNodePointerPair>::Get(NodeType::InnerType, nullptr, nullptr, inner_node_max_size_);
-
-            auto smallest_key_splitted_node = splitted_node->Begin()->first;
-            // a dummy key for the first slot of the internal node
-            KeyNodePointerPair p1 = std::make_pair(smallest_key_splitted_node, node);
-            KeyNodePointerPair p2 = std::make_pair(smallest_key_splitted_node, splitted_node);
-
-            auto new_root_node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(root_);
-            new_root_node->InsertElementIfPossible(p1, 0);
-            new_root_node->InsertElementIfPossible(p2, 1);
-            std::cout << "Created new root with children: " << new_root_node->GetCurrentSize() << std::endl;
+            // Insert the newly split leaf node into the chain
+            split_node->SetSiblingLeft(node);
+            split_node->SetSiblingRight(node->GetSiblingRight());
+            node->SetSiblingRight(split_node);
 
             return false;
         }

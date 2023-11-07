@@ -2,6 +2,7 @@
 #define BPLUSTREE_H
 
 #include <utility>
+#include <vector>
 #include "macros.h"
 
 namespace bplustree {
@@ -195,7 +196,7 @@ namespace bplustree {
             this->~ElasticNode<KeyNodePointerPair>();
         }
 
-        int FindLocation(const int key) {
+        KeyNodePointerPair *FindLocation(const int key) {
             BaseNode *dummy_ptr = nullptr;
             KeyNodePointerPair dummy_element = std::make_pair(key, dummy_ptr);
 
@@ -215,7 +216,7 @@ namespace bplustree {
                     [](const auto &a, const auto &b) { return a < b; }
             );
 
-            return this->GetOffset(iter);
+            return iter;
         }
     };
 
@@ -440,25 +441,22 @@ namespace bplustree {
             }
 
             BaseNode *current_node = root_;
+            std::vector<BaseNode *> node_write_path{}; // stack of node pointers
 
             // Traversing down the tree to find the leaf node where the
             // key-value element can be inserted
             while (current_node->GetType() != NodeType::LeafType) {
                 auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+                node_write_path.push_back(current_node);
 
-                auto greater_key_index_inner = static_cast<InnerNode *>(node)->FindLocation(element.first);
-                auto element_inner = node->At(greater_key_index_inner);
-                if (element.first < element_inner.first) {
-                    // The most common case where we traverse down the left_element_inner
-                    // node pointer.
-                    auto left_element_inner = node->At(greater_key_index_inner - 1);
-                    current_node = left_element_inner.second;
-                } else {
-                    // Traversing down the right node pointer. This will
-                    // only happen when the key of the element to be inserted
-                    // compares greater than the key at the rightmost end
-                    // of the current inner node.
-                    current_node = element_inner.second;
+                auto iter = static_cast<InnerNode *>(node)->FindLocation(element.first);
+                if (iter == node->End()) {
+                    auto last_element = (iter - 1);
+                    current_node = std::prev(iter)->second;
+                } else if (element.first == iter->first) {
+                    current_node = iter->second;
+                } else { // element.first < iter->first
+                    current_node = std::prev(iter)->second;
                 }
             }
 

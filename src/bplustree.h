@@ -66,15 +66,6 @@ namespace bplustree {
         }
 
         /**
-         *
-         * @return true if adding one more element will make the node full and
-         * therefore it has to split, false otherwise
-         */
-        bool WillBeFullAfterInsert() {
-            return (this->GetCurrentSize() + 1 >= this->GetMaxSize());
-        }
-
-        /**
          * Static helper to allocate storage for an elastic node.
          */
         static ElasticNode *Get(NodeType p_type, BaseNode *p_sibling_left, BaseNode *p_sibling_right, int p_max_size) {
@@ -102,35 +93,23 @@ namespace bplustree {
 
         ElementType *End() { return Begin() + GetCurrentSize(); }
 
-        int GetOffset(ElementType *location) { return location - Begin(); }
-
         int GetCurrentSize() { return current_size_; }
 
-        // assert index < max_size_
-        ElementType &At(const int index) { return *(Begin() + index); }
-
-        bool InsertElementIfPossible(ElementType element, const int index) {
-            // This guard could be removed if it can be guaranteed that this
-            // method will not be called on a node which is full in the
-            // B+Tree insert method
+        bool InsertElementIfPossible(const ElementType &element, ElementType *location) {
             if (GetCurrentSize() >= GetMaxSize()) {
                 return false;
             }
-            /**
-             * To insert an element at the given index all the elements have
-             * to be relocated to the right by 1. To copy the elements over
-             * correctly, the traversal should begin from the end of the
-             * internal array.
-             *
-             * TODO: Maybe use `std::memmove` here instead!
-             */
-            for (int i = GetCurrentSize() - 1; i >= index; --i) {
-                start_[i + 1] = start_[i];
+
+            if (std::distance(location, End()) > 0) {
+                std::memmove(
+                        reinterpret_cast<void *>(std::next(location)),
+                        reinterpret_cast<void *>(location),
+                        std::distance(location, End()) * sizeof(ElementType)
+                );
             }
 
-            // Place the element at index
-            new(start_ + index) ElementType{element};
-            current_size_ = current_size_ + 1;
+            new(location) ElementType{element};
+            ++current_size_;
 
             return true;
         }
@@ -243,13 +222,13 @@ namespace bplustree {
             this->~ElasticNode<KeyValuePair>();
         }
 
-        int FindLocation(const int key) {
+        KeyValuePair *FindLocation(const int key) {
             KeyValuePair dummy = std::make_pair(key, 0);
             KeyValuePair *iter = std::lower_bound(this->Begin(), this->End(), dummy,
                                                   [](const auto &a, const auto &b) {
                                                       return a < b;
                                                   });
-            return this->GetOffset(iter);
+            return iter;
         }
     };
 
@@ -461,12 +440,15 @@ namespace bplustree {
             }
 
             auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
-            auto index_greater_key_leaf = static_cast<LeafNode *>(node)->FindLocation(element.first);
-            // Proceed further only if this is not an already existing key
-            if (element.first == node->At(index_greater_key_leaf).first) {
-                return false;
+            auto iter = static_cast<LeafNode *>(node)->FindLocation(element.first);
+            if (iter != node->End() && element.first == iter->first) {
+                return false;   // duplicate key
             }
-            if (!node->WillBeFullAfterInsert() && node->InsertElementIfPossible(element, index_greater_key_leaf)) {
+
+            // If the leaf node will become full after inserting the current
+            // key-value element then we split the leaf node
+            auto leaf_will_split = node->GetCurrentSize() >= (node->GetMaxSize() - 1);
+            if (!leaf_will_split && node->InsertElementIfPossible(element, iter)) {
                 return true;
             }
 

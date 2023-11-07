@@ -79,6 +79,8 @@ namespace bplustree {
 
         ElementType *End() { return Begin() + GetCurrentSize(); }
 
+        ElementType *GetElementAt(ElementType *location) { return location; }
+
         int GetCurrentSize() { return current_size_; }
 
         void SetCurrentSize(int value) { current_size_ = value; }
@@ -408,13 +410,13 @@ namespace bplustree {
             }
 
             BaseNode *current_node = root_;
-            std::vector<BaseNode *> node_write_path{}; // stack of node pointers
+            std::vector<BaseNode *> node_search_path{}; // stack of node pointers
 
             // Traversing down the tree to find the leaf node where the
             // key-value element can be inserted
             while (current_node->GetType() != NodeType::LeafType) {
                 auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
-                node_write_path.push_back(current_node);
+                node_search_path.push_back(current_node);
 
                 auto iter = static_cast<InnerNode *>(node)->FindLocation(element.first);
                 if (iter == node->End()) {
@@ -464,6 +466,40 @@ namespace bplustree {
             split_node->SetSiblingRight(node->GetSiblingRight());
             node->SetSiblingRight(split_node);
 
+            bool insertion_finished = false;
+            BaseNode *new_child_node = split_node;
+            while (!insertion_finished && !node_search_path.empty()) {
+                auto parent = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(*node_search_path.rbegin());
+                node_search_path.pop_back();
+
+                auto smallest_key = (new_child_node->GetType() == NodeType::InnerType) ?
+                                    std::next(static_cast<InnerNode *>(new_child_node)->Begin())->first :
+                                    static_cast<LeafNode *>(new_child_node)->Begin()->first;
+                KeyNodePointerPair inner_node_element = std::make_pair(smallest_key, new_child_node);
+
+                if (parent->InsertElementIfPossible(
+                        inner_node_element,
+                        static_cast<InnerNode *>(parent)->FindLocation(inner_node_element.first)
+                )) {
+                    // we are done if insertion is possible without further splitting
+                    insertion_finished = true;
+                    break;
+                }
+
+                // Recursively split the node
+                auto split_parent = parent->SplitNode();
+                if (inner_node_element.first < split_parent->Begin()->first) {
+                    parent->InsertElementIfPossible(inner_node_element,
+                                                    static_cast<InnerNode *>(parent)->FindLocation(
+                                                            inner_node_element.first));
+                } else {
+                    split_parent->InsertElementIfPossible(inner_node_element,
+                                                          static_cast<InnerNode *>(split_parent)->FindLocation(
+                                                                  inner_node_element.first));
+                }
+
+                new_child_node = split_parent;
+            }
             return false;
         }
 

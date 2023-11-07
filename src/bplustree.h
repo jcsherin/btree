@@ -500,7 +500,27 @@ namespace bplustree {
 
                 new_child_node = split_parent;
             }
-            return false;
+
+            // If insertion has not finished by now the split propagated
+            // back up to the root. So we now need to split the root node
+            // as well
+            if (!insertion_finished) {
+                auto old_root = root_;
+
+                auto smallest_key = new_child_node->GetType() == NodeType::InnerType ?
+                                    std::next(static_cast<InnerNode *>(new_child_node)->Begin())->first :
+                                    static_cast<LeafNode *>(new_child_node)->Begin()->first;
+                KeyNodePointerPair root_element = std::make_pair(smallest_key, new_child_node);
+
+                root_ = ElasticNode<KeyNodePointerPair>::Get(NodeType::InnerType, nullptr, nullptr,
+                                                             inner_node_max_size_);
+                auto new_root_node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(root_);
+                new_root_node->InsertElementIfPossible(
+                        root_element, static_cast<InnerNode *>(new_root_node)->FindLocation(root_element.first)
+                );
+            }
+
+            return true;
         }
 
     private:

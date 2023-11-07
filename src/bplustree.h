@@ -35,32 +35,18 @@ namespace bplustree {
                 current_size_{0} {}
 
         ElasticNode *SplitNode() {
-            // Split the node only when the addition of one more key-value
-            // pair will make the node full
-            if (!this->WillBeFullAfterInsert()) {
-                return nullptr;
-            }
+            ElasticNode *new_node = this->Get(this->GetType(), nullptr, nullptr, this->GetMaxSize());
+            ElementType *copy_from_location = std::next(this->Begin(), FastCeilIntDivision(this->GetCurrentSize(), 2));
 
-            ElasticNode *new_node = this->Get(this->GetType(), this->sibling_left_, this->sibling_right_,
-                                              this->GetMaxSize());
 
-            std::cout << "(pre copy) New node, current size: " << new_node->GetCurrentSize() << std::endl;
-            std::cout << "(pre copy) Old node, current size: " << this->GetCurrentSize() << std::endl;
-
-            int copy_from_index = FastCeilIntDivision(this->GetCurrentSize(), 2);
-            int copied_count{0};
-            for (int i = 0, j = copy_from_index; j < this->GetCurrentSize(); ++i, ++j) {
-                std::cout << "Copy from: " << j << " to: " << i << " key: " << this->start_[j].first << std::endl;
-                new_node->start_[i] = this->start_[j];
-
-                // Adjust array size after copying
-                ++copied_count;
-            }
-            new_node->current_size_ = new_node->current_size_ + copied_count;
-            this->current_size_ = this->current_size_ - copied_count;
-            std::cout << "copied count: " << copied_count << std::endl;
-            std::cout << "(post copy) New node, current size: " << new_node->GetCurrentSize() << std::endl;
-            std::cout << "(post copy) Old node, current size: " << this->GetCurrentSize() << std::endl;
+            auto copied_count = std::distance(copy_from_location, End());
+            std::memcpy(
+                    reinterpret_cast<void *>(new_node->Begin()),
+                    reinterpret_cast<void *>(copy_from_location),
+                    copied_count * sizeof(ElementType)
+            );
+            new_node->SetCurrentSize(copied_count);
+            this->SetCurrentSize(std::distance(this->Begin(), copy_from_location));
 
             return new_node;
         }
@@ -94,6 +80,8 @@ namespace bplustree {
         ElementType *End() { return Begin() + GetCurrentSize(); }
 
         int GetCurrentSize() { return current_size_; }
+
+        void SetCurrentSize(int value) { current_size_ = value; }
 
         bool InsertElementIfPossible(const ElementType &element, ElementType *location) {
             if (GetCurrentSize() >= GetMaxSize()) {

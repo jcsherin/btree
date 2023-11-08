@@ -81,6 +81,8 @@ namespace bplustree {
 
         ElementType *GetElementAt(ElementType *location) { return location; }
 
+        ElementType *GetPreviousElement(ElementType *location) { return std::prev(location); }
+
         int GetCurrentSize() { return current_size_; }
 
         void SetCurrentSize(int value) { current_size_ = value; }
@@ -262,12 +264,11 @@ namespace bplustree {
 
                 auto iter = static_cast<InnerNode *>(node)->FindLocation(element.first);
                 if (iter == node->End()) {
-                    auto last_element = (iter - 1);
-                    current_node = std::prev(iter)->second;
+                    current_node = node->GetPreviousElement(iter)->second;
                 } else if (element.first == iter->first) {
                     current_node = iter->second;
                 } else { // element.first < iter->first
-                    current_node = std::prev(iter)->second;
+                    current_node = node->GetPreviousElement(iter)->second;
                 }
             }
 

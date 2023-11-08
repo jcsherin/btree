@@ -181,9 +181,9 @@ namespace bplustree {
              *      | P0 | K1+P1 | ... | KN+PN |
              *      +----+-------+-----+-------+
              */
-            auto first = this->Begin() + 1;
+            auto first = std::next(this->Begin());
             KeyNodePointerPair *iter = std::lower_bound(
-                    first, this->End(), dummy_element,
+                    std::next(this->Begin()), this->End(), dummy_element,
                     [](const auto &a, const auto &b) { return a < b; }
             );
 

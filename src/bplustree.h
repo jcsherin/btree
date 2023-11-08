@@ -79,8 +79,6 @@ namespace bplustree {
 
         ElementType *End() { return Begin() + GetCurrentSize(); }
 
-        ElementType *GetElementAt(ElementType *location) { return location; }
-
         ElementType *GetPreviousElement(ElementType *location) { return std::prev(location); }
 
         int GetCurrentSize() { return current_size_; }

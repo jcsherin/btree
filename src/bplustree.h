@@ -252,22 +252,34 @@ namespace bplustree {
                 // Create an empty leaf node, which is also the root
                 root_ = ElasticNode<KeyValuePair>::Get(NodeType::LeafType, nullptr, nullptr, leaf_node_max_size_);
             }
+            BPLUSTREE_ASSERT(root_ != nullptr, "B+Tree must have a root node");
 
             BaseNode *current_node = root_;
-            std::vector<BaseNode *> node_search_path{}; // stack of node pointers
 
-            // Traversing down the tree to find the leaf node where the
-            // key-value element can be inserted
+            // Maintain a stack of nodes from the root down to the leaf
+            // node where the insertion of the key-value element will
+            // happen. This is done for handling node splits in leaf
+            // and internal nodes.
+            std::vector<BaseNode *> node_search_path{};
+
+            // Search for the leaf node to insert key-value element by
+            // traversing down the tree nodes.
             while (current_node->GetType() != NodeType::LeafType) {
                 auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
                 node_search_path.push_back(current_node);
 
                 auto iter = static_cast<InnerNode *>(node)->FindLocation(element.first);
                 if (iter == node->End()) {
+                    BPLUSTREE_ASSERT(iter != node->Begin(), "Safe to get previous element from node iterator");
+                    BPLUSTREE_ASSERT(element.first > iter->first,
+                                     "Element key compares greater than largest key in node");
                     current_node = node->GetPreviousElement(iter)->second;
                 } else if (element.first == iter->first) {
                     current_node = iter->second;
                 } else { // element.first < iter->first
+                    BPLUSTREE_ASSERT(iter != node->Begin(), "Safe to get previous element from node iterator");
+                    BPLUSTREE_ASSERT(element.first < iter->first,
+                                     "Element key compares less than key pointed to by iterator");
                     current_node = node->GetPreviousElement(iter)->second;
                 }
             }

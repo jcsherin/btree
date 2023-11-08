@@ -300,16 +300,18 @@ namespace bplustree {
                 }
             }
 
+            // Split the leaf node and insert the element in one of
+            // the leaf nodes
             auto split_node = node->SplitNode();
-            if (element.first < split_node->Begin()->first) {
-                node->InsertElementIfPossible(
-                        element,
-                        static_cast<LeafNode *>(node)->FindLocation(element.first)
-                );
-            } else {
+            if (element.first >= split_node->Begin()->first) {
                 split_node->InsertElementIfPossible(
                         element,
                         static_cast<LeafNode *>(split_node)->FindLocation(element.first)
+                );
+            } else {
+                node->InsertElementIfPossible(
+                        element,
+                        static_cast<LeafNode *>(node)->FindLocation(element.first)
                 );
             }
 

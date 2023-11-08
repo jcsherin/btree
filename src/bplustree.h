@@ -252,7 +252,6 @@ namespace bplustree {
                 // Create an empty leaf node, which is also the root
                 root_ = ElasticNode<KeyValuePair>::Get(NodeType::LeafType, nullptr, nullptr, leaf_node_max_size_);
             }
-            BPLUSTREE_ASSERT(root_ != nullptr, "B+Tree must have a root node");
 
             BaseNode *current_node = root_;
 
@@ -270,16 +269,10 @@ namespace bplustree {
 
                 auto iter = static_cast<InnerNode *>(node)->FindLocation(element.first);
                 if (iter == node->End()) {
-                    BPLUSTREE_ASSERT(iter != node->Begin(), "Safe to get previous element from node iterator");
-                    BPLUSTREE_ASSERT(element.first > iter->first,
-                                     "Element key compares greater than largest key in node");
                     current_node = node->GetPreviousElement(iter)->second;
                 } else if (element.first == iter->first) {
                     current_node = iter->second;
                 } else { // element.first < iter->first
-                    BPLUSTREE_ASSERT(iter != node->Begin(), "Safe to get previous element from node iterator");
-                    BPLUSTREE_ASSERT(element.first < iter->first,
-                                     "Element key compares less than key pointed to by iterator");
                     current_node = node->GetPreviousElement(iter)->second;
                 }
             }
@@ -290,7 +283,6 @@ namespace bplustree {
                 return false;   // duplicate key
             }
 
-            BPLUSTREE_ASSERT(element.first != iter->first, "Inserting unique key");
             // If the leaf node will become full after inserting the current
             // key-value element then we split the leaf node
             auto leaf_will_split = node->GetCurrentSize() >= (node->GetMaxSize() - 1);

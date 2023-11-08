@@ -266,14 +266,10 @@ namespace bplustree {
 
             BaseNode *current_node = root_;
 
-            // Maintain a stack of nodes from the root down to the leaf
-            // node where the insertion of the key-value element will
-            // happen. This is done for handling node splits in leaf
-            // and internal nodes.
+            // Used to maintain a stack of node pointers from root to leaf
             std::vector<BaseNode *> node_search_path{};
 
-            // Search for the leaf node to insert key-value element by
-            // traversing down the tree nodes.
+            // Search for leaf node traversing down the B+Tree
             while (current_node->GetType() != NodeType::LeafType) {
                 auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
                 node_search_path.push_back(current_node);
@@ -288,28 +284,23 @@ namespace bplustree {
                 }
             }
 
+            // Reached the leaf node
             auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+
+            // Find where to insert element in leaf node
             auto iter = static_cast<LeafNode *>(node)->FindLocation(element.first);
+
+            // Does not insert if this is a duplicate key
             if (iter != node->End() && element.first == iter->first) {
-                return false;   // duplicate key
+                return false;
             }
 
-            // If the leaf node will become full after inserting the current
-            // key-value element then we split the leaf node
-            auto leaf_will_split = node->GetCurrentSize() >= (node->GetMaxSize() - 1);
-            if (!leaf_will_split && node->InsertElementIfPossible(element, iter)) {
-                return true;
             // Insert will be complete here, if the leaf node has space
             if (!(static_cast<LeafNode *>(node)->WillSplitAfterInsert())) {
                 if (node->InsertElementIfPossible(element, iter)) {
                     return true;
                 }
             }
-
-            // Split the leaf node
-            BPLUSTREE_ASSERT(node->GetCurrentSize() == (node->GetMaxSize() - 1),
-                             "node will become full after next insert");
-
 
             auto split_node = node->SplitNode();
             if (element.first < split_node->Begin()->first) {

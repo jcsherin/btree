@@ -222,6 +222,17 @@ namespace bplustree {
                                                   });
             return iter;
         }
+
+        /**
+         * Let N be the maximum key-value elements which can be stored in
+         * the leaf node. In this implementation after inserting (N-1)
+         * key-value elements, we split the leaf node.
+         *
+         * @return true if leaf should split, false otherwise
+         */
+        bool WillSplitAfterInsert() {
+            return this->GetCurrentSize() >= (this->GetMaxSize() - 1);
+        }
     };
 
     class BPlusTree {
@@ -288,6 +299,11 @@ namespace bplustree {
             auto leaf_will_split = node->GetCurrentSize() >= (node->GetMaxSize() - 1);
             if (!leaf_will_split && node->InsertElementIfPossible(element, iter)) {
                 return true;
+            // Insert will be complete here, if the leaf node has space
+            if (!(static_cast<LeafNode *>(node)->WillSplitAfterInsert())) {
+                if (node->InsertElementIfPossible(element, iter)) {
+                    return true;
+                }
             }
 
             // Split the leaf node

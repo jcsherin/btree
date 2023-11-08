@@ -315,7 +315,8 @@ namespace bplustree {
                 );
             }
 
-            // Insert the newly split leaf node into the chain
+            // Fix sibling pointers to maintain a bidirectional chain
+            // of leaf nodes
             split_node->SetSiblingLeft(node);
             split_node->SetSiblingRight(node->GetSiblingRight());
             node->SetSiblingRight(split_node);

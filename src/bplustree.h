@@ -79,6 +79,8 @@ namespace bplustree {
 
         ElementType *End() { return Begin() + GetCurrentSize(); }
 
+        ElementType *GetFirst() { return Begin(); }
+
         ElementType *GetPreviousElement(ElementType *location) { return std::prev(location); }
 
         int GetCurrentSize() { return current_size_; }
@@ -186,6 +188,10 @@ namespace bplustree {
             );
 
             return iter;
+        }
+
+        KeyNodePointerPair *GetFirst() {
+            return std::next(this->Begin());
         }
     };
 
@@ -322,38 +328,36 @@ namespace bplustree {
             node->SetSiblingRight(split_node);
 
             bool insertion_finished = false;
-            BaseNode *new_child_node = split_node;
+            BaseNode *current_split_node = split_node;
+            auto partition_key = split_node->GetFirst()->first;
+
             while (!insertion_finished && !node_search_path.empty()) {
-                auto parent = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(*node_search_path.rbegin());
+                auto inner_node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(*node_search_path.rbegin());
                 node_search_path.pop_back();
 
-                auto smallest_key = (new_child_node->GetType() == NodeType::InnerType) ?
-                                    std::next(static_cast<InnerNode *>(new_child_node)->Begin())->first :
-                                    static_cast<LeafNode *>(new_child_node)->Begin()->first;
-                KeyNodePointerPair inner_node_element = std::make_pair(smallest_key, new_child_node);
+                KeyNodePointerPair inner_node_element = std::make_pair(partition_key, current_split_node);
 
-                if (parent->InsertElementIfPossible(
+                if (inner_node->InsertElementIfPossible(
                         inner_node_element,
-                        static_cast<InnerNode *>(parent)->FindLocation(inner_node_element.first)
+                        static_cast<InnerNode *>(inner_node)->FindLocation(inner_node_element.first)
                 )) {
                     // we are done if insertion is possible without further splitting
                     insertion_finished = true;
-                    break;
-                }
-
-                // Recursively split the node
-                auto split_parent = parent->SplitNode();
-                if (inner_node_element.first < split_parent->Begin()->first) {
-                    parent->InsertElementIfPossible(inner_node_element,
-                                                    static_cast<InnerNode *>(parent)->FindLocation(
-                                                            inner_node_element.first));
                 } else {
-                    split_parent->InsertElementIfPossible(inner_node_element,
-                                                          static_cast<InnerNode *>(split_parent)->FindLocation(
-                                                                  inner_node_element.first));
-                }
+                    // Recursively split the node
+                    auto split_inner_node = inner_node->SplitNode();
+                    if (inner_node_element.first >= split_inner_node->GetFirst()->first) {
+                        split_inner_node->InsertElementIfPossible(inner_node_element,
+                                                                  static_cast<InnerNode *>(split_inner_node)->FindLocation(
+                                                                          inner_node_element.first));
+                    } else {
+                        inner_node->InsertElementIfPossible(inner_node_element,
+                                                            static_cast<InnerNode *>(inner_node)->FindLocation(
+                                                                    inner_node_element.first));
+                    }
 
-                new_child_node = split_parent;
+                    current_split_node = split_inner_node;
+                }
             }
 
             // If insertion has not finished by now the split propagated
@@ -362,10 +366,10 @@ namespace bplustree {
             if (!insertion_finished) {
                 auto old_root = root_;
 
-                auto smallest_key = new_child_node->GetType() == NodeType::InnerType ?
-                                    std::next(static_cast<InnerNode *>(new_child_node)->Begin())->first :
-                                    static_cast<LeafNode *>(new_child_node)->Begin()->first;
-                KeyNodePointerPair root_element = std::make_pair(smallest_key, new_child_node);
+                auto smallest_key = current_split_node->GetType() == NodeType::InnerType ?
+                                    std::next(static_cast<InnerNode *>(current_split_node)->Begin())->first :
+                                    static_cast<LeafNode *>(current_split_node)->Begin()->first;
+                KeyNodePointerPair root_element = std::make_pair(smallest_key, current_split_node);
 
                 root_ = ElasticNode<KeyNodePointerPair>::Get(NodeType::InnerType, nullptr, nullptr,
                                                              inner_node_max_size_);

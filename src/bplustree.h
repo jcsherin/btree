@@ -36,21 +36,26 @@ namespace bplustree {
                 low_key_{p_low_key},
                 sibling_left_{nullptr},
                 sibling_right_{nullptr},
-                current_size_{0} {}
+                end_{start_} {}
 
+        /**
+         *
+         * @return a pointer to the new node after splitting the current
+         * node. Returns `nullptr` if the node is not already full.
+         */
         ElasticNode *SplitNode() {
+            if (this->GetCurrentSize() < this->GetMaxSize()) return nullptr;
+
             ElasticNode *new_node = this->Get(this->GetType(), this->GetLowKeyPair(), this->GetMaxSize());
             ElementType *copy_from_location = std::next(this->Begin(), FastCeilIntDivision(this->GetCurrentSize(), 2));
 
-
-            auto copied_count = std::distance(copy_from_location, End());
             std::memcpy(
                     reinterpret_cast<void *>(new_node->Begin()),
                     reinterpret_cast<void *>(copy_from_location),
-                    copied_count * sizeof(ElementType)
+                    std::distance(copy_from_location, this->End()) * sizeof(ElementType)
             );
-            new_node->SetCurrentSize(copied_count);
-            this->SetCurrentSize(std::distance(this->Begin(), copy_from_location));
+            new_node->SetEnd(std::distance(copy_from_location, this->End()));
+            end_ = copy_from_location;
 
             return new_node;
         }
@@ -79,20 +84,24 @@ namespace bplustree {
             delete[] reinterpret_cast<char *>(alloc);
         }
 
+        void SetEnd(int offset) { end_ = start_ + offset; }
+
         ElementType *Begin() { return start_; }
 
-        ElementType *End() { return Begin() + GetCurrentSize(); }
+        const ElementType *Begin() const { return start_; }
+
+        ElementType *End() { return end_; }
+
+        const ElementType *End() const { return end_; }
+
+        int GetCurrentSize() const {
+            return std::distance(Begin(), End());
+        }
 
         ElementType *GetPreviousElement(ElementType *location) { return std::prev(location); }
 
-        int GetCurrentSize() { return current_size_; }
-
-        void SetCurrentSize(int value) { current_size_ = value; }
-
         bool InsertElementIfPossible(const ElementType &element, ElementType *location) {
-            if (GetCurrentSize() >= GetMaxSize()) {
-                return false;
-            }
+            if (GetCurrentSize() >= GetMaxSize()) { return false; }
 
             if (std::distance(location, End()) > 0) {
                 std::memmove(
@@ -101,9 +110,8 @@ namespace bplustree {
                         std::distance(location, End()) * sizeof(ElementType)
                 );
             }
-
             new(location) ElementType{element};
-            ++current_size_;
+            std::advance(end_, 1);
 
             return true;
         }
@@ -153,11 +161,11 @@ namespace bplustree {
         const KeyNodePointerPair low_key_;
 
         // Sibling pointers for chaining leaf nodes
-        BaseNode *sibling_left_;
-        BaseNode *sibling_right_;
+        BaseNode *sibling_left_{nullptr};
+        BaseNode *sibling_right_{nullptr};
 
-        // Size of the internal array `start_`
-        int current_size_;
+        // Points to location one past the last element in `start_`
+        ElementType *end_;
 
         /*
          * Struct hack (flexible array member)

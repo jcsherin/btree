@@ -364,18 +364,14 @@ namespace bplustree {
             if (!insertion_finished) {
                 auto old_root = root_;
 
-                auto smallest_key = current_split_node->GetType() == NodeType::InnerType ?
-                                    std::next(static_cast<InnerNode *>(current_split_node)->Begin())->first :
-                                    static_cast<LeafNode *>(current_split_node)->Begin()->first;
-                KeyNodePointerPair root_element = std::make_pair(smallest_key, current_split_node);
-
-                KeyNodePointerPair low_key = std::make_pair(smallest_key, old_root);
+                KeyNodePointerPair low_key = std::make_pair(current_partition_key, old_root);
                 root_ = ElasticNode<KeyNodePointerPair>::Get(NodeType::InnerType, low_key, inner_node_max_size_);
 
                 auto new_root_node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(root_);
-                new_root_node->InsertElementIfPossible(
-                        root_element, static_cast<InnerNode *>(new_root_node)->FindLocation(root_element.first)
-                );
+                KeyNodePointerPair root_element = std::make_pair(current_partition_key, current_split_node);
+                new_root_node->InsertElementIfPossible(root_element,
+                                                       static_cast<InnerNode *>(new_root_node)->FindLocation(
+                                                               root_element.first));
             }
 
             return true;

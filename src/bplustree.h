@@ -193,19 +193,8 @@ namespace bplustree {
             BaseNode *dummy_ptr = nullptr;
             KeyNodePointerPair dummy_element = std::make_pair(key, dummy_ptr);
 
-            /*
-             * The inner node contains N node pointers, and N-1 keys. We
-             * store the extra node pointer at index 0. The first valid
-             * key is stored beginning at index 1. So for key lookups we
-             * should always skip index 0.
-             *
-             *      +----+-------+-----+-------+
-             *      | P0 | K1+P1 | ... | KN+PN |
-             *      +----+-------+-----+-------+
-             */
-            auto first = std::next(this->Begin());
             KeyNodePointerPair *iter = std::lower_bound(
-                    std::next(this->Begin()), this->End(), dummy_element,
+                    this->Begin(), this->End(), dummy_element,
                     [](const auto &a, const auto &b) { return a < b; }
             );
 

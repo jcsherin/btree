@@ -5,9 +5,9 @@ using bplustree::NodeType;
 using bplustree::ElasticNode;
 
 TEST(BPlusTreeTest, NodeTypes) {
-    auto leaf = ElasticNode<int>(NodeType::LeafType, 5);
+    auto leaf = ElasticNode<int>(NodeType::LeafType, std::make_pair(0, nullptr), 5);
     EXPECT_TRUE(leaf.GetType() == NodeType::LeafType);
 
-    auto inner = ElasticNode<int>(NodeType::InnerType, 5);
+    auto inner = ElasticNode<int>(NodeType::InnerType, std::make_pair(0, nullptr), 5);
     EXPECT_TRUE(inner.GetType() == NodeType::InnerType);
 }

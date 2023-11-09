@@ -25,17 +25,21 @@ namespace bplustree {
         int max_size_;
     };
 
+    using KeyNodePointerPair = std::pair<int, BaseNode *>;
+    using KeyValuePair = std::pair<int, int>;
+
     template<typename ElementType>
     class ElasticNode : public BaseNode {
     public:
-        ElasticNode(NodeType p_type, int p_max_size) :
+        ElasticNode(NodeType p_type, KeyNodePointerPair p_low_key, int p_max_size) :
                 BaseNode(p_type, p_max_size),
+                low_key_{p_low_key},
                 sibling_left_{nullptr},
                 sibling_right_{nullptr},
                 current_size_{0} {}
 
         ElasticNode *SplitNode() {
-            ElasticNode *new_node = this->Get(this->GetType(), this->GetMaxSize());
+            ElasticNode *new_node = this->Get(this->GetType(), this->GetLowKeyPair(), this->GetMaxSize());
             ElementType *copy_from_location = std::next(this->Begin(), FastCeilIntDivision(this->GetCurrentSize(), 2));
 
 
@@ -54,7 +58,7 @@ namespace bplustree {
         /**
          * Static helper to allocate storage for an elastic node.
          */
-        static ElasticNode *Get(NodeType p_type, int p_max_size) {
+        static ElasticNode *Get(NodeType p_type, KeyNodePointerPair p_low_key, int p_max_size) {
             auto *alloc = new char[sizeof(ElasticNode) + p_max_size * sizeof(ElementType)];
 
             /**
@@ -62,7 +66,7 @@ namespace bplustree {
              * https://en.cppreference.com/w/cpp/language/new#Placement_new
              */
             auto elastic_node = reinterpret_cast<ElasticNode *>(alloc);
-            new(elastic_node) ElasticNode(p_type, p_max_size);
+            new(elastic_node) ElasticNode(p_type, p_low_key, p_max_size);
 
             return elastic_node;
         }
@@ -114,6 +118,8 @@ namespace bplustree {
 
         void SetSiblingRight(BaseNode *node) { sibling_right_ = node; }
 
+        KeyNodePointerPair GetLowKeyPair() { return low_key_; }
+
     private:
         /**
          * Helper for minimum node occupancy calculation based on node fanout
@@ -130,6 +136,24 @@ namespace bplustree {
         }
 
     private:
+        // 1. An inner node stores N keys, and (N+1) node pointers. This is
+        // the extra node pointer in the inner node. It points to the node
+        // with keys less than the smallest key in the inner node. This is
+        // always set to `nullptr` in leaf nodes, and has no meaning.
+        //
+        // 2. The addition of this node pointer separate from the `start_`
+        // internal array simplifies code which deals with searching, splitting
+        // and merging of inner nodes. This is because the to store the extra
+        // node pointer, we leave the first key as invalid. The actual first
+        // key therefore begins at index 1 and any code which dealt with inner
+        // nodes have to handle this special case. This specialization is not
+        // necessary anymore with the addition of this field.
+        //
+        // 3. This is added here instead of in the derived `InnerNode` class
+        // because it will clash with the `start_` array which is invisible
+        // to the compiler.
+        const KeyNodePointerPair low_key_;
+
         // Sibling pointers for chaining leaf nodes
         BaseNode *sibling_left_;
         BaseNode *sibling_right_;
@@ -145,8 +169,6 @@ namespace bplustree {
          */
         ElementType start_[0];
     };
-
-    using KeyNodePointerPair = std::pair<int, BaseNode *>;
 
     class InnerNode : public ElasticNode<KeyNodePointerPair> {
     public:
@@ -194,8 +216,6 @@ namespace bplustree {
             return std::next(this->Begin());
         }
     };
-
-    using KeyValuePair = std::pair<int, int>;
 
     class BPlusTree;
 
@@ -265,7 +285,8 @@ namespace bplustree {
         bool Insert(const KeyValuePair element) {
             if (root_ == nullptr) {
                 // Create an empty leaf node, which is also the root
-                root_ = ElasticNode<KeyValuePair>::Get(NodeType::LeafType, leaf_node_max_size_);
+                KeyNodePointerPair dummy_low_key = std::make_pair(element.first, nullptr);
+                root_ = ElasticNode<KeyValuePair>::Get(NodeType::LeafType, dummy_low_key, leaf_node_max_size_);
             }
 
             BaseNode *current_node = root_;
@@ -371,7 +392,9 @@ namespace bplustree {
                                     static_cast<LeafNode *>(current_split_node)->Begin()->first;
                 KeyNodePointerPair root_element = std::make_pair(smallest_key, current_split_node);
 
-                root_ = ElasticNode<KeyNodePointerPair>::Get(NodeType::InnerType, inner_node_max_size_);
+                KeyNodePointerPair low_key = std::make_pair(smallest_key, old_root);
+                root_ = ElasticNode<KeyNodePointerPair>::Get(NodeType::InnerType, low_key, inner_node_max_size_);
+
                 auto new_root_node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(root_);
                 new_root_node->InsertElementIfPossible(
                         root_element, static_cast<InnerNode *>(new_root_node)->FindLocation(root_element.first)

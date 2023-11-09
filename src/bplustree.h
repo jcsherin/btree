@@ -326,13 +326,13 @@ namespace bplustree {
 
             bool insertion_finished = false;
             BaseNode *current_split_node = split_node;
-            auto partition_key = split_node->Begin()->first;
+            auto current_partition_key = split_node->Begin()->first;
 
             while (!insertion_finished && !node_search_path.empty()) {
                 auto inner_node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(*node_search_path.rbegin());
                 node_search_path.pop_back();
 
-                KeyNodePointerPair inner_node_element = std::make_pair(partition_key, current_split_node);
+                KeyNodePointerPair inner_node_element = std::make_pair(current_partition_key, current_split_node);
 
                 if (inner_node->InsertElementIfPossible(
                         inner_node_element,
@@ -354,6 +354,7 @@ namespace bplustree {
                     }
 
                     current_split_node = split_inner_node;
+                    current_partition_key = split_inner_node->Begin()->first;
                 }
             }
 

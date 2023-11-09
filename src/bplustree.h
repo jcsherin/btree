@@ -378,6 +378,12 @@ namespace bplustree {
         }
 
     private:
+        friend class BPlusTreeTest;
+
+        FRIEND_TEST(BPlusTreeTest, IsEmptyInitially);
+
+        FRIEND_TEST(BPlusTreeTest, IsNotEmptyAfterFirstInsert);
+
         BaseNode *root_;
         int inner_node_max_size_;
         int leaf_node_max_size_;

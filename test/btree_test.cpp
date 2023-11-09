@@ -2,11 +2,24 @@
 #include "../src/bplustree.h"
 
 namespace bplustree {
-    TEST(BPlusTreeTest, NodeTypes) {
-        auto leaf = ElasticNode<int>(NodeType::LeafType, std::make_pair(0, nullptr), 5);
-        EXPECT_TRUE(leaf.GetType() == NodeType::LeafType);
+    class BPlusTreeTest : public testing::Test {
+    protected:
+        void SetUp() override {}
 
-        auto inner = ElasticNode<int>(NodeType::InnerType, std::make_pair(0, nullptr), 5);
-        EXPECT_TRUE(inner.GetType() == NodeType::InnerType);
+        BPlusTree index{4, 5};
+    };
+
+    TEST_F(BPlusTreeTest, IsEmptyInitially) {
+        EXPECT_EQ(index.root_, nullptr);
+    }
+
+    TEST_F(BPlusTreeTest, IsNotEmptyAfterFirstInsert) {
+        index.Insert(std::make_pair(1, 1));
+
+        EXPECT_NE(index.root_, nullptr);
+        EXPECT_EQ(index.root_->GetType(), NodeType::LeafType);
+        EXPECT_EQ(index.root_->GetMaxSize(), index.leaf_node_max_size_);
+
+        EXPECT_EQ(static_cast<ElasticNode<KeyValuePair> *>(index.root_)->GetCurrentSize(), 1);
     }
 }

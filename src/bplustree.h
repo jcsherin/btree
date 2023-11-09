@@ -83,8 +83,6 @@ namespace bplustree {
 
         ElementType *End() { return Begin() + GetCurrentSize(); }
 
-        ElementType *GetFirst() { return Begin(); }
-
         ElementType *GetPreviousElement(ElementType *location) { return std::prev(location); }
 
         int GetCurrentSize() { return current_size_; }
@@ -199,10 +197,6 @@ namespace bplustree {
             );
 
             return iter;
-        }
-
-        KeyNodePointerPair *GetFirst() {
-            return std::next(this->Begin());
         }
     };
 
@@ -319,7 +313,7 @@ namespace bplustree {
             // Split the leaf node and insert the element in one of
             // the leaf nodes
             auto split_node = node->SplitNode();
-            if (element.first >= split_node->GetFirst()->first) {
+            if (element.first >= split_node->Begin()->first) {
                 split_node->InsertElementIfPossible(
                         element,
                         static_cast<LeafNode *>(split_node)->FindLocation(element.first)
@@ -339,7 +333,7 @@ namespace bplustree {
 
             bool insertion_finished = false;
             BaseNode *current_split_node = split_node;
-            auto partition_key = split_node->GetFirst()->first;
+            auto partition_key = split_node->Begin()->first;
 
             while (!insertion_finished && !node_search_path.empty()) {
                 auto inner_node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(*node_search_path.rbegin());
@@ -356,7 +350,7 @@ namespace bplustree {
                 } else {
                     // Recursively split the node
                     auto split_inner_node = inner_node->SplitNode();
-                    if (inner_node_element.first >= split_inner_node->GetFirst()->first) {
+                    if (inner_node_element.first >= split_inner_node->Begin()->first) {
                         split_inner_node->InsertElementIfPossible(inner_node_element,
                                                                   static_cast<InnerNode *>(split_inner_node)->FindLocation(
                                                                           inner_node_element.first));

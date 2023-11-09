@@ -98,8 +98,6 @@ namespace bplustree {
             return std::distance(Begin(), End());
         }
 
-        ElementType *GetPreviousElement(ElementType *location) { return std::prev(location); }
-
         bool InsertElementIfPossible(const ElementType &element, ElementType *location) {
             if (GetCurrentSize() >= GetMaxSize()) { return false; }
 
@@ -292,11 +290,11 @@ namespace bplustree {
 
                 auto iter = static_cast<InnerNode *>(node)->FindLocation(element.first);
                 if (iter == node->End()) {
-                    current_node = node->GetPreviousElement(iter)->second;
+                    current_node = std::prev(iter)->second;
                 } else if (element.first == iter->first) {
                     current_node = iter->second;
                 } else { // element.first < iter->first
-                    current_node = node->GetPreviousElement(iter)->second;
+                    current_node = std::prev(iter)->second;
                 }
             }
 

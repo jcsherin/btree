@@ -124,6 +124,10 @@ namespace bplustree {
 
         KeyNodePointerPair GetLowKeyPair() { return low_key_; }
 
+        const ElementType &At(const int index) {
+            return *(std::next(Begin(), index));
+        }
+
     private:
         /**
          * Helper for minimum node occupancy calculation based on node fanout
@@ -382,7 +386,7 @@ namespace bplustree {
 
         FRIEND_TEST(BPlusTreeTest, IsEmptyInitially);
 
-        FRIEND_TEST(BPlusTreeTest, IsNotEmptyAfterFirstInsert);
+        FRIEND_TEST(BPlusTreeTest, RootIsLeafNode);
 
         BaseNode *root_;
         int inner_node_max_size_;

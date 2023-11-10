@@ -13,13 +13,18 @@ namespace bplustree {
         EXPECT_EQ(index.root_, nullptr);
     }
 
-    TEST_F(BPlusTreeTest, IsNotEmptyAfterFirstInsert) {
-        index.Insert(std::make_pair(1, 1));
+    TEST_F(BPlusTreeTest, RootIsLeafNode) {
+        auto element = std::make_pair(1, 1);
+        index.Insert(element);
 
-        EXPECT_NE(index.root_, nullptr);
-        EXPECT_EQ(index.root_->GetType(), NodeType::LeafType);
-        EXPECT_EQ(index.root_->GetMaxSize(), index.leaf_node_max_size_);
+        auto root_leaf_node = reinterpret_cast<ElasticNode<KeyValuePair> *>(index.root_);
 
-        EXPECT_EQ(static_cast<ElasticNode<KeyValuePair> *>(index.root_)->GetCurrentSize(), 1);
+        EXPECT_NE(root_leaf_node, nullptr);
+        EXPECT_EQ(root_leaf_node->GetType(), NodeType::LeafType);
+        EXPECT_EQ(root_leaf_node->GetMaxSize(), index.leaf_node_max_size_);
+        EXPECT_EQ(root_leaf_node->GetCurrentSize(), 1);
+
+        EXPECT_EQ(root_leaf_node->At(0).first, element.first);
+        EXPECT_EQ(root_leaf_node->At(0).second, element.second);
     }
 }

@@ -390,6 +390,8 @@ namespace bplustree {
 
         FRIEND_TEST(BPlusTreeTest, FillRootLeafNode);
 
+        FRIEND_TEST(BPlusTreeTest, RootLeafNodeWillSplit);
+
         BaseNode *root_;
         int inner_node_max_size_;
         int leaf_node_max_size_;

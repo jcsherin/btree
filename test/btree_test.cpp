@@ -97,5 +97,9 @@ namespace bplustree {
             EXPECT_EQ(first_key_leaf->At(i).second, i + 3);
         }
 
+        EXPECT_EQ(low_key_leaf->GetSiblingLeft(), nullptr);
+        EXPECT_EQ(low_key_leaf->GetSiblingRight(), first_key_leaf);
+        EXPECT_EQ(first_key_leaf->GetSiblingLeft(), low_key_leaf);
+        EXPECT_EQ(first_key_leaf->GetSiblingRight(), nullptr);
     }
 }

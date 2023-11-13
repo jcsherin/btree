@@ -452,33 +452,35 @@ namespace bplustree {
             }
             graph << std::endl;
 
-            graph << "subgraph leaf_nodes {" << std::endl;
-            std::deque<std::string> leaf_node_ids;
-            while (!leaf_edges.empty()) {
-                auto edge = leaf_edges.back();
-                leaf_edges.pop_back();
+            if (!leaf_edges.empty()) {
+                graph << "subgraph leaf_nodes {" << std::endl;
+                std::deque<std::string> leaf_node_ids;
+                while (!leaf_edges.empty()) {
+                    auto edge = leaf_edges.back();
+                    leaf_edges.pop_back();
 
-                graph << edge.first << " -> " << edge.second << std::endl;
-                graph << edge.second << " -> " << edge.first << std::endl;
+                    graph << edge.first << " -> " << edge.second << std::endl;
+                    graph << edge.second << " -> " << edge.first << std::endl;
 
-                // Ensures that duplicate node identifiers are not added to the
-                // deque by checking the current edge with the last edge which
-                // was added in the previous iteration.
-                if (leaf_node_ids.empty() || leaf_node_ids.back() != edge.first) {
-                    leaf_node_ids.push_back(edge.first);
+                    // Ensures that duplicate node identifiers are not added to the
+                    // deque by checking the current edge with the last edge which
+                    // was added in the previous iteration.
+                    if (leaf_node_ids.empty() || leaf_node_ids.back() != edge.first) {
+                        leaf_node_ids.push_back(edge.first);
+                    }
+                    leaf_node_ids.push_back(edge.second);
                 }
-                leaf_node_ids.push_back(edge.second);
-            }
-            graph << std::endl;
+                graph << std::endl;
 
-            graph << "{" << std::endl;
-            graph << "rank=" << WrapInDoubleQuotes("same") << std::endl;
-            for (auto &leaf_id: leaf_node_ids) {
-                graph << leaf_id << std::endl;
-            }
-            graph << "}" << std::endl;
+                graph << "{" << std::endl;
+                graph << "rank=" << WrapInDoubleQuotes("same") << std::endl;
+                for (auto &leaf_id: leaf_node_ids) {
+                    graph << leaf_id << std::endl;
+                }
+                graph << "}" << std::endl;
 
-            graph << "}" << std::endl; // end subgraph leaf_nodes
+                graph << "}" << std::endl; // end subgraph leaf_nodes
+            }
 
             graph << "}\n";
             return graph.str();

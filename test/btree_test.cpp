@@ -1,6 +1,13 @@
 #include <gtest/gtest.h>
 #include <numeric>
+
+#ifndef BPLUS_TREE_FRIEND_TEST_ENABLED
+#define BPLUS_TREE_FRIEND_TEST_ENABLED
+
 #include "../src/bplustree.h"
+
+#endif
+
 
 namespace bplustree {
     class BPlusTreeTest : public testing::Test {

@@ -555,15 +555,17 @@ namespace bplustree {
         }
 
     private:
+
+// @formatter:off
+#ifdef BPLUS_TREE_FRIEND_TEST_ENABLED
         friend class BPlusTreeTest;
 
         FRIEND_TEST(BPlusTreeTest, IsEmptyInitially);
-
         FRIEND_TEST(BPlusTreeTest, RootIsLeafNode);
-
         FRIEND_TEST(BPlusTreeTest, FillRootLeafNode);
-
         FRIEND_TEST(BPlusTreeTest, RootLeafNodeWillSplit);
+#endif
+// @formatter: on
 
         BaseNode *root_;
         int inner_node_max_size_;

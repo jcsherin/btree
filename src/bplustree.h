@@ -422,7 +422,7 @@ namespace bplustree {
                     graph << " [";
                     graph << " shape=" << WrapInDoubleQuotes("plaintext");
                     graph << " label=<" << ToHTMLTable(leaf_node) << ">";
-                    graph << " fillcolor=" << WrapInDoubleQuotes("#F3B664") << "style=" << WrapInDoubleQuotes("filled");
+                    graph << " fillcolor=" << WrapInDoubleQuotes("#9FBB73") << "style=" << WrapInDoubleQuotes("filled");
                     graph << " ]";
                     graph << std::endl;
                 }

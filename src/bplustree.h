@@ -391,6 +391,7 @@ namespace bplustree {
             std::stringstream graph;
             std::queue<BaseNode *> nodes;
             std::deque<std::pair<std::string, std::string>> edges;
+            std::deque<std::pair<std::string, std::string>> leaf_edges;
 
             graph << "digraph bplus_tree {\n";
 
@@ -411,9 +412,17 @@ namespace bplustree {
                     graph << " ]";
                     graph << std::endl;
 
-                    edges.push_back(std::make_pair(MakeNodeIdFor(inner_node) + ":low_key",
-                                                   MakeNodeIdFor(inner_node->GetLowKeyPair().second)));
+                    edges.push_front(std::make_pair(MakeNodeIdFor(inner_node) + ":low_key",
+                                                    MakeNodeIdFor(inner_node->GetLowKeyPair().second)));
                     nodes.push(inner_node->GetLowKeyPair().second);
+
+                    for (int i = 0; i < inner_node->GetCurrentSize(); ++i) {
+                        auto child_node = inner_node->At(i).second;
+
+                        edges.push_front(std::make_pair(MakeNodeIdFor(inner_node) + ":key_" + std::to_string(i),
+                                                        MakeNodeIdFor(child_node)));
+                        nodes.push(child_node);
+                    }
                 } else {
                     auto leaf_node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
 
@@ -425,9 +434,14 @@ namespace bplustree {
                     graph << " fillcolor=" << WrapInDoubleQuotes("#9FBB73") << "style=" << WrapInDoubleQuotes("filled");
                     graph << " ]";
                     graph << std::endl;
+
+                    if (leaf_node->GetSiblingRight() != nullptr) {
+                        leaf_edges.push_front(
+                                std::make_pair(MakeNodeIdFor(leaf_node),
+                                               MakeNodeIdFor(leaf_node->GetSiblingRight())));
+                    }
                 }
             }
-
             graph << std::endl;
 
             while (!edges.empty()) {
@@ -436,6 +450,30 @@ namespace bplustree {
 
                 graph << edge.first << " -> " << edge.second << std::endl;
             }
+            graph << std::endl;
+
+            graph << "subgraph leaf_nodes {" << std::endl;
+            std::deque<std::string> leaf_node_ids;
+            while (!leaf_edges.empty()) {
+                auto edge = leaf_edges.back();
+                leaf_edges.pop_back();
+
+                graph << edge.first << " -> " << edge.second << std::endl;
+                graph << edge.second << " -> " << edge.first << std::endl;
+
+                leaf_node_ids.push_back(edge.first);
+                leaf_node_ids.push_back(edge.second);
+            }
+            graph << std::endl;
+
+            graph << "{" << std::endl;
+            graph << "rank=" << WrapInDoubleQuotes("same") << std::endl;
+            for (auto &leaf_id: leaf_node_ids) {
+                graph << leaf_id << std::endl;
+            }
+            graph << "}" << std::endl;
+
+            graph << "}" << std::endl; // end subgraph leaf_nodes
 
             graph << "}\n";
             return graph.str();

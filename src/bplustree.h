@@ -505,8 +505,8 @@ namespace bplustree {
             std::stringstream table;
             auto colspan = std::to_string(inner_node->GetCurrentSize() + 1);
 
-            table << "<table cellspacing=" << WrapInDoubleQuotes("0");
-            table << " cellborder=" << WrapInDoubleQuotes("1");
+            table << "<table cellspacing=" << WrapInDoubleQuotes("2");
+            table << " cellborder=" << WrapInDoubleQuotes("2");
             table << " border=" << WrapInDoubleQuotes("0");
             table << ">" << std::endl;
 
@@ -532,8 +532,8 @@ namespace bplustree {
             std::stringstream table;
             auto colspan = std::to_string(leaf_node->GetCurrentSize());
 
-            table << "<table cellspacing=" << WrapInDoubleQuotes("0");
-            table << " cellborder=" << WrapInDoubleQuotes("1");
+            table << "<table cellspacing=" << WrapInDoubleQuotes("2");
+            table << " cellborder=" << WrapInDoubleQuotes("2");
             table << " border=" << WrapInDoubleQuotes("0");
             table << ">" << std::endl;
 

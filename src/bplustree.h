@@ -3,6 +3,8 @@
 
 #include <utility>
 #include <vector>
+#include <sstream>
+#include <queue>
 #include "macros.h"
 
 namespace bplustree {
@@ -379,6 +381,132 @@ namespace bplustree {
             }
 
             return true;
+        }
+
+        std::string ToGraph() {
+            if (root_ == nullptr) {
+                return "digraph empty_bplus_tree {}";
+            }
+
+            std::stringstream graph;
+            std::queue<BaseNode *> nodes;
+            std::deque<std::pair<std::string, std::string>> edges;
+
+            graph << "digraph bplus_tree {\n";
+
+            nodes.push(root_);
+            while (!nodes.empty()) {
+                auto current_node = nodes.front();
+                nodes.pop();
+
+                if (current_node->GetType() == NodeType::InnerType) {
+                    auto inner_node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+
+                    graph << std::endl;
+                    graph << MakeNodeIdFor(inner_node);
+                    graph << " [";
+                    graph << " shape=" << WrapInDoubleQuotes("plaintext");
+                    graph << " label=<" << ToHTMLTable(inner_node) << ">";
+                    graph << " fillcolor=" << WrapInDoubleQuotes("#F3B664") << "style=" << WrapInDoubleQuotes("filled");
+                    graph << " ]";
+                    graph << std::endl;
+
+                    edges.push_back(std::make_pair(MakeNodeIdFor(inner_node) + ":low_key",
+                                                   MakeNodeIdFor(inner_node->GetLowKeyPair().second)));
+                    nodes.push(inner_node->GetLowKeyPair().second);
+                } else {
+                    auto leaf_node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+
+                    graph << std::endl;
+                    graph << MakeNodeIdFor(leaf_node);
+                    graph << " [";
+                    graph << " shape=" << WrapInDoubleQuotes("plaintext");
+                    graph << " label=<" << ToHTMLTable(leaf_node) << ">";
+                    graph << " fillcolor=" << WrapInDoubleQuotes("#F3B664") << "style=" << WrapInDoubleQuotes("filled");
+                    graph << " ]";
+                    graph << std::endl;
+                }
+            }
+
+            graph << std::endl;
+
+            while (!edges.empty()) {
+                auto edge = edges.back();
+                edges.pop_back();
+
+                graph << edge.first << " -> " << edge.second << std::endl;
+            }
+
+            graph << "}\n";
+            return graph.str();
+        }
+
+    private:
+        std::string MakeNodeIdFor(BaseNode *node) {
+            std::string node_prefix = "Node_";
+            std::stringstream out;
+            out << node_prefix << reinterpret_cast<std::uintptr_t>(node);
+            return out.str();
+        }
+
+        std::string WrapInDoubleQuotes(std::string s) {
+            std::string dq = "\"";
+            std::stringstream out;
+            out << dq << s << dq;
+            return out.str();
+        }
+
+        std::string ToHTMLTable(ElasticNode<KeyNodePointerPair> *inner_node) {
+            std::stringstream table;
+            auto colspan = std::to_string(inner_node->GetCurrentSize() + 1);
+
+            table << "<table cellspacing=" << WrapInDoubleQuotes("0");
+            table << " cellborder=" << WrapInDoubleQuotes("1");
+            table << " border=" << WrapInDoubleQuotes("0");
+            table << ">" << std::endl;
+
+            table << "<tr>" << "<td colspan=" << WrapInDoubleQuotes(colspan) << ">"
+                  << "count: " << inner_node->GetCurrentSize()
+                  << "</td></tr>" << std::endl;
+
+            table << "<tr>" << std::endl;
+            table << "<td port=" << WrapInDoubleQuotes("low_key") << ">low key" << "</td>" << std::endl;
+            for (int i = 0; i < inner_node->GetCurrentSize(); ++i) {
+                table << "<td port=" << WrapInDoubleQuotes("key_" + std::to_string(i)) << ">"
+                      << inner_node->At(i).first
+                      << "</td>" << std::endl;
+            }
+            table << "</tr>" << std::endl;
+
+            table << "</table>" << std::endl;
+
+            return table.str();
+        }
+
+        std::string ToHTMLTable(ElasticNode<KeyValuePair> *leaf_node) {
+            std::stringstream table;
+            auto colspan = std::to_string(leaf_node->GetCurrentSize());
+
+            table << "<table cellspacing=" << WrapInDoubleQuotes("0");
+            table << " cellborder=" << WrapInDoubleQuotes("1");
+            table << " border=" << WrapInDoubleQuotes("0");
+            table << ">" << std::endl;
+
+            table << "<tr>" << "<td colspan=" << WrapInDoubleQuotes(colspan) << ">"
+                  << "count: " << leaf_node->GetCurrentSize()
+                  << "</td></tr>" << std::endl;
+
+            table << "<tr>" << std::endl;
+            for (int i = 0; i < leaf_node->GetCurrentSize(); ++i) {
+                table << "<td port=" << WrapInDoubleQuotes("key_" + std::to_string(i)) << ">"
+                      << leaf_node->At(i).first
+                      << "</td>" << std::endl;
+            }
+            table << "</tr>" << std::endl;
+
+            table << "</table>" << std::endl;
+
+            return table.str();
         }
 
     private:

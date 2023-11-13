@@ -461,7 +461,12 @@ namespace bplustree {
                 graph << edge.first << " -> " << edge.second << std::endl;
                 graph << edge.second << " -> " << edge.first << std::endl;
 
-                leaf_node_ids.push_back(edge.first);
+                // Ensures that duplicate node identifiers are not added to the
+                // deque by checking the current edge with the last edge which
+                // was added in the previous iteration.
+                if (leaf_node_ids.empty() || leaf_node_ids.back() != edge.first) {
+                    leaf_node_ids.push_back(edge.first);
+                }
                 leaf_node_ids.push_back(edge.second);
             }
             graph << std::endl;

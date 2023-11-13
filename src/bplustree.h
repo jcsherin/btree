@@ -420,7 +420,7 @@ namespace bplustree {
                         auto child_node = inner_node->At(i).second;
 
                         edges.push_front(std::make_pair(MakeNodeIdFor(inner_node) + ":key_" + std::to_string(i),
-                                                        MakeNodeIdFor(child_node)));
+                                                        MakeNodeIdFor(child_node) + ":n"));
                         nodes.push(child_node);
                     }
                 } else {

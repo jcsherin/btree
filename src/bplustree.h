@@ -515,7 +515,8 @@ namespace bplustree {
                   << "</td></tr>" << std::endl;
 
             table << "<tr>" << std::endl;
-            table << "<td port=" << WrapInDoubleQuotes("low_key") << ">low key" << "</td>" << std::endl;
+            table << "<td port=" << WrapInDoubleQuotes("low_key") << ">low key:" << inner_node->GetLowKeyPair().first
+                  << "</td>" << std::endl;
             for (int i = 0; i < inner_node->GetCurrentSize(); ++i) {
                 table << "<td port=" << WrapInDoubleQuotes("key_" + std::to_string(i)) << ">"
                       << inner_node->At(i).first

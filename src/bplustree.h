@@ -289,7 +289,7 @@ namespace bplustree {
                 } else if (element.first == iter->first) {
                     current_node = iter->second;
                 } else { // element.first < iter->first
-                    current_node = std::prev(iter)->second;
+                    current_node = (iter != node->Begin()) ? std::prev(iter)->second : node->GetLowKeyPair().second;
                 }
             }
 

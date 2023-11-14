@@ -116,6 +116,20 @@ namespace bplustree {
             return true;
         }
 
+        bool PopBegin() {
+            if (GetCurrentSize() == 0) { return false; }
+            if (GetCurrentSize() == 1) {
+                SetEnd(0);
+                return true;
+            }
+
+            std::memmove(reinterpret_cast<void *>(start_),
+                         reinterpret_cast<void *>(start_ + 1),
+                         (this->GetCurrentSize() - 1) * sizeof(ElementType));
+            SetEnd(this->GetCurrentSize() - 1);
+            return true;
+        }
+
         BaseNode *GetSiblingLeft() { return sibling_left_; }
 
         BaseNode *GetSiblingRight() { return sibling_right_; }
@@ -124,7 +138,7 @@ namespace bplustree {
 
         void SetSiblingRight(BaseNode *node) { sibling_right_ = node; }
 
-        KeyNodePointerPair GetLowKeyPair() { return low_key_; }
+        KeyNodePointerPair &GetLowKeyPair() { return low_key_; }
 
         const ElementType &At(const int index) {
             return *(std::next(Begin(), index));
@@ -162,7 +176,7 @@ namespace bplustree {
         // 3. This is added here instead of in the derived `InnerNode` class
         // because it will clash with the `start_` array which is invisible
         // to the compiler.
-        const KeyNodePointerPair low_key_;
+        KeyNodePointerPair low_key_;
 
         // Sibling pointers for chaining leaf nodes
         BaseNode *sibling_left_{nullptr};
@@ -358,6 +372,9 @@ namespace bplustree {
                                                             static_cast<InnerNode *>(inner_node)->FindLocation(
                                                                     inner_node_element.first));
                     }
+                    split_inner_node->GetLowKeyPair().first = split_inner_node->Begin()->first;
+                    split_inner_node->GetLowKeyPair().second = split_inner_node->Begin()->second;
+                    split_inner_node->PopBegin();
 
                     current_split_node = split_inner_node;
                     current_partition_key = split_inner_node->Begin()->first;

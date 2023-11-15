@@ -271,6 +271,18 @@ namespace bplustree {
              */
         }
 
+        BaseNode *FindLeafNode() {
+            if (root_ == nullptr) { return nullptr; }
+
+            BaseNode *current_node = nullptr;
+            while (current_node->GetType() != NodeType::LeafType) {
+                auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+                current_node = node->GetLowKeyPair().second;
+            }
+
+            return current_node;
+        }
+
         BaseNode *FindLeafNode(int key) {
             if (root_ == nullptr) { return nullptr; }
 

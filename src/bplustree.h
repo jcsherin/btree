@@ -258,6 +258,49 @@ namespace bplustree {
         }
     };
 
+    class BPlusTreeIterator {
+        auto operator*() -> KeyValuePair & {
+            return *current_element_;
+        }
+
+        void operator++() {
+            current_element_ = std::next(current_element_);
+            if (current_element_ != current_node_->End()) { return; }
+
+            if (current_node_->GetSiblingRight() == nullptr) {
+                SetEndIterator();
+                return;
+            }
+
+            current_node_ = static_cast<ElasticNode<KeyValuePair> *>(current_node_->GetSiblingRight());
+            current_element_ = current_node_->Begin();
+        }
+
+    private:
+        enum IteratorState {
+            VALID,
+            END
+        };
+
+        // Iterator is currently at this leaf node
+        ElasticNode<KeyValuePair> *current_node_;
+
+        // Pointer to element in current leaf node
+        KeyValuePair *current_element_;
+
+        IteratorState state_;
+
+        void ResetIterator() {
+            current_node_ = nullptr;
+            current_element_ = nullptr;
+        }
+
+        void SetEndIterator() {
+            ResetIterator();
+            state_ = END;
+        };
+    };
+
     class BPlusTree {
     public:
         explicit BPlusTree(int p_inner_node_max_size, int p_leaf_node_max_size) :

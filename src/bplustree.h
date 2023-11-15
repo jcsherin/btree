@@ -345,14 +345,11 @@ namespace bplustree {
             node->SetSiblingRight(split_node);
 
             bool insertion_finished = false;
-            BaseNode *current_split_node = split_node;
-            auto current_partition_key = split_node->Begin()->first;
 
+            KeyNodePointerPair inner_node_element = std::make_pair(split_node->Begin()->first, split_node);
             while (!insertion_finished && !node_search_path.empty()) {
                 auto inner_node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(*node_search_path.rbegin());
                 node_search_path.pop_back();
-
-                KeyNodePointerPair inner_node_element = std::make_pair(current_partition_key, current_split_node);
 
                 if (inner_node->InsertElementIfPossible(
                         inner_node_element,
@@ -376,8 +373,7 @@ namespace bplustree {
                     split_inner_node->GetLowKeyPair().second = split_inner_node->Begin()->second;
                     split_inner_node->PopBegin();
 
-                    current_split_node = split_inner_node;
-                    current_partition_key = split_inner_node->Begin()->first;
+                    inner_node_element = std::make_pair(split_inner_node->GetLowKeyPair().first, split_inner_node);
                 }
             }
 
@@ -387,14 +383,13 @@ namespace bplustree {
             if (!insertion_finished) {
                 auto old_root = root_;
 
-                KeyNodePointerPair low_key = std::make_pair(current_partition_key, old_root);
+                KeyNodePointerPair low_key = std::make_pair(inner_node_element.first, old_root);
                 root_ = ElasticNode<KeyNodePointerPair>::Get(NodeType::InnerType, low_key, inner_node_max_size_);
 
                 auto new_root_node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(root_);
-                KeyNodePointerPair root_element = std::make_pair(current_partition_key, current_split_node);
-                new_root_node->InsertElementIfPossible(root_element,
+                new_root_node->InsertElementIfPossible(inner_node_element,
                                                        static_cast<InnerNode *>(new_root_node)->FindLocation(
-                                                               root_element.first));
+                                                               inner_node_element.first));
             }
 
             return true;

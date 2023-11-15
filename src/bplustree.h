@@ -5,6 +5,7 @@
 #include <vector>
 #include <sstream>
 #include <queue>
+#include <optional>
 #include "macros.h"
 
 namespace bplustree {
@@ -268,6 +269,42 @@ namespace bplustree {
             /**
              * TODO: Free all the nodes in the tree
              */
+        }
+
+        BaseNode *FindLeafNode(int key) {
+            if (root_ == nullptr) { return nullptr; }
+
+            BaseNode *current_node = root_;
+            while (current_node->GetType() != NodeType::LeafType) {
+                auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+                auto iter = static_cast<InnerNode *>(node)->FindLocation(key);
+
+                if (iter == node->End()) {
+                    current_node = std::prev(iter)->second;
+                } else if (key == iter->first) {
+                    current_node = iter->second;
+                } else {
+                    current_node = (iter != node->Begin()) ? std::prev(iter)->second : node->GetLowKeyPair().second;
+                }
+            }
+
+            return current_node;
+        }
+
+        std::optional<int> FindValueOfKey(int key) {
+            auto current_node = FindLeafNode(key);
+            if (current_node == nullptr) {
+                return std::nullopt;
+            }
+
+            auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+            auto iter = static_cast<LeafNode *>(node)->FindLocation(key);
+
+            if (iter == node->End() || key != iter->first) {
+                return std::nullopt;
+            }
+
+            return std::optional<int>{iter->second};
         }
 
         /**

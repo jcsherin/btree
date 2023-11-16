@@ -343,6 +343,18 @@ namespace bplustree {
             current_element_ = std::prev(current_node_->End());
         }
 
+        bool operator==(const BPlusTreeIterator &other) const {
+            return (current_element_ == other.current_element_
+                    && current_node_ == other.current_node_
+                    && state_ == other.state_);
+        }
+
+        bool operator!=(const BPlusTreeIterator &other) const {
+            return !(current_element_ == other.current_element_
+                     && current_node_ == other.current_node_
+                     && state_ == other.state_);
+        }
+
     private:
         enum IteratorState {
             VALID, INVALID, END, REND

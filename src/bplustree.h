@@ -306,23 +306,42 @@ namespace bplustree {
         }
 
         void operator++() {
-            current_element_ = std::next(current_element_);
-            if (current_element_ != current_node_->End()) { return; }
+            BPLUSTREE_ASSERT(state_ == VALID, "Iterator in invalid state.");
 
-            if (current_node_->GetSiblingRight() == nullptr) {
-                SetEndIterator();
+            if (current_element_ != current_node_->End()) {
+                current_element_ = std::next(current_element_);
                 return;
             }
 
             current_node_ = static_cast<ElasticNode<KeyValuePair> *>(current_node_->GetSiblingRight());
+            if (current_node_ == nullptr) {
+                SetEndIterator();
+                return;
+            }
+
             current_element_ = current_node_->Begin();
+        }
+
+        void operator--() {
+            BPLUSTREE_ASSERT(state_ == VALID, "Iterator in invalid state");
+
+            if (current_element_ != current_node_->Begin()) {
+                current_element_ = std::prev(current_element_);
+                return;
+            }
+
+            current_node_ = static_cast<ElasticNode<KeyValuePair> *>(current_node_->GetSiblingLeft());
+            if (current_node_ == nullptr) {
+                SetREndIterator();
+                return;
+            }
+
+            current_element_ = std::prev(current_node_->End());
         }
 
     private:
         enum IteratorState {
-            VALID,
-            INVALID,
-            END
+            VALID, INVALID, END, REND
         };
 
         // Iterator is currently at this leaf node
@@ -342,6 +361,11 @@ namespace bplustree {
             ResetIterator();
             state_ = END;
         };
+
+        void SetREndIterator() {
+            ResetIterator();
+            state_ = REND;
+        }
     };
 
     class BPlusTree {

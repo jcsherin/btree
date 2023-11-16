@@ -259,6 +259,7 @@ namespace bplustree {
     };
 
     class BPlusTreeIterator {
+    public:
         BPlusTreeIterator(ElasticNode<KeyValuePair> *node, KeyValuePair *element) :
                 current_node_{node},
                 current_element_{element},
@@ -353,6 +354,12 @@ namespace bplustree {
                      && state_ == other.state_);
         }
 
+        static BPlusTreeIterator GetEndIterator() {
+            auto iter = BPlusTreeIterator();
+            iter.SetEndIterator();
+            return iter;
+        }
+
     private:
         enum IteratorState {
             VALID, INVALID, END, REND
@@ -393,6 +400,20 @@ namespace bplustree {
             /**
              * TODO: Free all the nodes in the tree
              */
+        }
+
+        BPlusTreeIterator End() {
+            return BPlusTreeIterator::GetEndIterator();
+        }
+
+        BPlusTreeIterator Begin() {
+            auto current_node = FindLeafNode();
+            if (current_node == nullptr) {
+                return End();
+            }
+
+            auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+            return BPlusTreeIterator(node, node->Begin());
         }
 
         BaseNode *FindLeafNode() {

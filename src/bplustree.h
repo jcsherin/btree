@@ -303,8 +303,6 @@ namespace bplustree {
             return *this;
         }
 
-        bool IsEnd() { return state_ == IteratorState::END; }
-
         auto operator*() -> KeyValuePair & {
             return *current_element_;
         }

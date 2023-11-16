@@ -275,6 +275,10 @@ namespace bplustree {
             state_ = INVALID;
         }
 
+        BPlusTreeIterator(const BPlusTreeIterator &) = delete;
+
+        BPlusTreeIterator &operator=(const BPlusTreeIterator &) = delete;
+
         BPlusTreeIterator(BPlusTreeIterator &&other) noexcept {
             current_node_ = other.current_node_;
             current_element_ = other.current_element_;

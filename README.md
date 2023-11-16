@@ -12,16 +12,26 @@ Todos:
 - [ ] Insert Crab latching (optimistic)
 - [ ] Insert Crab latching (pessimistic)
 - [ ] Insert tests
-  - [ ] Simple Inserts
-  - [ ] Leaf Node Splits (single split)
-  - [ ] Inner Node Splits (multiple splits)
-  - [ ] Multiple splits also involving root node 
-- [ ] Find key (point query)
+    - [ ] Simple Inserts
+    - [ ] Leaf Node Splits (single split)
+    - [ ] Inner Node Splits (multiple splits)
+    - [ ] Multiple splits also involving root node
+    - [ ] Structural integrity
+- [x] Find key (point query)
+- [ ] Find first leaf node
+- [ ] Find last leaf node
 - [ ] Find key within bounds (range query)
 - [ ] Delete key-value
-- [ ] Forward Iterator
-- [ ] Reverse Iterator
-- [ ] Guard for ensuring `ElasticNode::FreeElasticNode` always gets
+- [ ] Iterators
+    - [ ] Begin
+    - [ ] Begin(key)
+    - [ ] RBegin
+    - [ ] RBegin(key)
+    - [ ] End
+    - [ ] REnd
+- [x] Forward Iterator
+- [x] Reverse Iterator
+- [ ] Destructor - free all node storage
   called
 - [ ] Add macros
     - [x] Always assert

@@ -259,6 +259,48 @@ namespace bplustree {
     };
 
     class BPlusTreeIterator {
+        BPlusTreeIterator(ElasticNode<KeyValuePair> *node, KeyValuePair *element) :
+                current_node_{node},
+                current_element_{element},
+                state_{IteratorState::VALID} {}
+
+        BPlusTreeIterator() :
+                current_node_{nullptr},
+                current_element_{nullptr},
+                state_{IteratorState::INVALID} {}
+
+        ~BPlusTreeIterator() {
+            current_node_ = nullptr;
+            current_element_ = nullptr;
+            state_ = INVALID;
+        }
+
+        BPlusTreeIterator(BPlusTreeIterator &&other) noexcept {
+            current_node_ = other.current_node_;
+            current_element_ = other.current_element_;
+            state_ = other.state_;
+
+            other.current_node_ = nullptr;
+            other.current_element_ = nullptr;
+            state_ = IteratorState::INVALID;
+        }
+
+        BPlusTreeIterator &operator=(BPlusTreeIterator &&other) noexcept {
+            if (this != &other) {
+                current_node_ = other.current_node_;
+                current_element_ = other.current_element_;
+                state_ = other.state_;
+
+                other.current_node_ = nullptr;
+                other.current_element_ = nullptr;
+                state_ = IteratorState::INVALID;
+            }
+
+            return *this;
+        }
+
+        bool IsEnd() { return state_ == IteratorState::END; }
+
         auto operator*() -> KeyValuePair & {
             return *current_element_;
         }
@@ -279,6 +321,7 @@ namespace bplustree {
     private:
         enum IteratorState {
             VALID,
+            INVALID,
             END
         };
 

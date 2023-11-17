@@ -569,6 +569,10 @@ namespace bplustree {
                 );
             }
 
+            if (node->GetSiblingRight() != nullptr) {
+                auto current_right_sibling = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetSiblingRight());
+                current_right_sibling->SetSiblingLeft(split_node);
+            }
             // Fix sibling pointers to maintain a bidirectional chain
             // of leaf nodes
             split_node->SetSiblingLeft(node);

@@ -91,6 +91,12 @@ namespace bplustree {
 
         ElementType *Begin() { return start_; }
 
+        ElementType *RBegin() {
+            if (this->GetCurrentSize() == 0) { return nullptr; }
+
+            return std::prev(this->End());
+        }
+
         const ElementType *Begin() const { return start_; }
 
         ElementType *End() { return end_; }
@@ -333,12 +339,11 @@ namespace bplustree {
                 return;
             }
 
-            current_node_ = static_cast<ElasticNode<KeyValuePair> *>(current_node_->GetSiblingLeft());
             if (current_node_ == nullptr) {
                 SetREndIterator();
                 return;
             }
-
+            current_node_ = static_cast<ElasticNode<KeyValuePair> *>(current_node_->GetSiblingLeft());
             current_element_ = std::prev(current_node_->End());
         }
 
@@ -357,6 +362,12 @@ namespace bplustree {
         static BPlusTreeIterator GetEndIterator() {
             auto iter = BPlusTreeIterator();
             iter.SetEndIterator();
+            return iter;
+        }
+
+        static BPlusTreeIterator GetREndIterator() {
+            auto iter = BPlusTreeIterator();
+            iter.SetREndIterator();
             return iter;
         }
 
@@ -406,6 +417,10 @@ namespace bplustree {
             return BPlusTreeIterator::GetEndIterator();
         }
 
+        BPlusTreeIterator REnd() {
+            return BPlusTreeIterator::GetREndIterator();
+        }
+
         BPlusTreeIterator Begin() {
             auto current_node = FindLeafNode();
             if (current_node == nullptr) {
@@ -414,6 +429,16 @@ namespace bplustree {
 
             auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
             return BPlusTreeIterator(node, node->Begin());
+        }
+
+        BPlusTreeIterator RBegin() {
+            auto current_node = FindLastLeafNode();
+            if (current_node == nullptr) {
+                return REnd();
+            }
+
+            auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+            return BPlusTreeIterator(node, node->RBegin());
         }
 
         BaseNode *FindLeafNode() {
@@ -443,6 +468,18 @@ namespace bplustree {
                 } else {
                     current_node = (iter != node->Begin()) ? std::prev(iter)->second : node->GetLowKeyPair().second;
                 }
+            }
+
+            return current_node;
+        }
+
+        BaseNode *FindLastLeafNode() {
+            if (root_ == nullptr) { return nullptr; }
+
+            BaseNode *current_node = root_;
+            while (current_node->GetType() != NodeType::LeafType) {
+                auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+                current_node = std::prev(node->End())->second;
             }
 
             return current_node;

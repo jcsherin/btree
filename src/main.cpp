@@ -1,5 +1,7 @@
 #include <iostream>
 #include "bplustree.h"
+#include <numeric>
+#include <random>
 
 int FastCeilIntDivision(int x, int y) {
     return 1 + ((x - 1) / y);
@@ -29,16 +31,26 @@ void print_fanout() {
 }
 
 int main() {
-    auto tree = bplustree::BPlusTree(4, 4);
-    tree.Insert(std::make_pair(105, 456));
-    tree.Insert(std::make_pair(125, 456));
-    tree.Insert(std::make_pair(100, 456));
-    // try duplicate insertion
-    tree.Insert(std::make_pair(105, 456));
-    tree.Insert(std::make_pair(125, 456));
-    tree.Insert(std::make_pair(100, 456));
-    // leaf node will split for this insertion
-    tree.Insert(std::make_pair(130, 456));
+    auto index = bplustree::BPlusTree(4, 4);
+
+    std::vector<int> v(16);
+    std::iota(v.begin(), v.end(), 0);
+
+    std::random_device rd;
+    std::mt19937 g(rd());
+
+    std::shuffle(v.begin(), v.end(), g);
+    for (auto &num: v) {
+        index.Insert(std::make_pair(num, num));
+    }
+
+    for (auto iter = index.Begin(); iter != index.End(); ++iter) {
+        std::cout << "Key: " << (*iter).first << " Value: " << (*iter).second << std::endl;
+    }
+
+    for (auto iter = index.RBegin(); iter != index.REnd(); --iter) {
+        std::cout << "Key: " << (*iter).first << " Value: " << (*iter).second << std::endl;
+    }
 
     return 0;
 }

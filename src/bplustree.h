@@ -311,17 +311,17 @@ namespace bplustree {
         void operator++() {
             BPLUSTREE_ASSERT(state_ == VALID, "Iterator in invalid state.");
 
-            if (current_element_ != current_node_->End()) {
+            if (std::next(current_element_) != current_node_->End()) {
                 current_element_ = std::next(current_element_);
                 return;
             }
 
-            current_node_ = static_cast<ElasticNode<KeyValuePair> *>(current_node_->GetSiblingRight());
-            if (current_node_ == nullptr) {
+            if (current_node_->GetSiblingRight() == nullptr) {
                 SetEndIterator();
                 return;
             }
 
+            current_node_ = static_cast<ElasticNode<KeyValuePair> *>(current_node_->GetSiblingRight());
             current_element_ = current_node_->Begin();
         }
 

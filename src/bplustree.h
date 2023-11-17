@@ -339,7 +339,7 @@ namespace bplustree {
                 return;
             }
 
-            if (current_node_ == nullptr) {
+            if (current_node_->GetSiblingLeft() == nullptr) {
                 SetREndIterator();
                 return;
             }

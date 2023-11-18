@@ -18,21 +18,20 @@ Todos:
     - [ ] Multiple splits also involving root node
     - [ ] Structural integrity
 - [x] Find key (point query)
-- [ ] Find first leaf node
-- [ ] Find last leaf node
+- [x] Find first leaf node
+- [x] Find last leaf node
 - [ ] Find key within bounds (range query)
 - [ ] Delete key-value
 - [ ] Iterators
-    - [ ] Begin
+    - [x] Begin
     - [ ] Begin(key)
-    - [ ] RBegin
+    - [x] RBegin
     - [ ] RBegin(key)
-    - [ ] End
-    - [ ] REnd
+    - [x] End
+    - [x] REnd
 - [x] Forward Iterator
 - [x] Reverse Iterator
-- [ ] Destructor - free all node storage
-  called
+- [x] Destructor - free all tree nodes
 - [ ] Add macros
     - [x] Always assert
     - [ ] Logger

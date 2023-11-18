@@ -407,11 +407,7 @@ namespace bplustree {
                 inner_node_max_size_{p_inner_node_max_size},
                 leaf_node_max_size_{p_leaf_node_max_size} {}
 
-        ~BPlusTree() {
-            /**
-             * TODO: Free all the nodes in the tree
-             */
-        }
+        ~BPlusTree() { FreeTree(); }
 
         BPlusTreeIterator End() {
             return BPlusTreeIterator::GetEndIterator();
@@ -500,6 +496,46 @@ namespace bplustree {
 
             return std::optional<int>{iter->second};
         }
+
+        void FreeTree() {
+            if (root_ == nullptr) { return; }
+
+            std::queue<BaseNode *> collect_queue;
+            std::queue<BaseNode *> free_queue;
+            collect_queue.push(root_);
+
+            while (!collect_queue.empty()) {
+                auto current_node = collect_queue.front();
+                collect_queue.pop();
+                free_queue.push(current_node);
+
+                if (current_node->GetType() != NodeType::LeafType) {
+                    auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+
+                    collect_queue.push(node->GetLowKeyPair().second);
+                    auto current_element = node->Begin();
+                    while (current_element != node->End()) {
+                        collect_queue.push(current_element->second);
+                        current_element = std::next(current_element);
+                    }
+                }
+            }
+
+            std::cout << "Releasing nodes: " << free_queue.size() << std::endl;
+            while (!free_queue.empty()) {
+                auto current_node = free_queue.front();
+                free_queue.pop();
+
+                if (current_node->GetType() != NodeType::LeafType) {
+                    auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+                    node->FreeElasticNode();
+                } else {
+                    auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+                    node->FreeElasticNode();
+                }
+            }
+        }
+
 
         /**
          *

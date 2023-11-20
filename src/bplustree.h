@@ -231,6 +231,11 @@ namespace bplustree {
 
             return iter;
         }
+
+        int GetMinSize() {
+            // size for removal of inner node = [Ceil(FAN_OUT / 2) - 1]
+            return FastCeilIntDivision(this->GetMaxSize(), 2) - 1;
+        }
     };
 
     class BPlusTree;

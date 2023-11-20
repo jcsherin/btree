@@ -138,6 +138,21 @@ namespace bplustree {
             return true;
         }
 
+        bool DeleteElement(ElementType *location) {
+            if (std::distance(Begin(), location) < 0) { return false; }
+
+            if (GetCurrentSize() == 1) {
+                SetEnd(0);
+                return true;
+            }
+
+            std::memmove(reinterpret_cast<void *>(location),
+                         reinterpret_cast<void *>(std::next(location)),
+                         (std::distance(location, End()) - 1) * sizeof(ElementType));
+            SetEnd(GetCurrentSize() - 1);
+            return true;
+        }
+
         bool PopBegin() {
             if (GetCurrentSize() == 0) { return false; }
             if (GetCurrentSize() == 1) {

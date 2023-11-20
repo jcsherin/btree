@@ -691,6 +691,42 @@ namespace bplustree {
             return true;
         }
 
+        bool Delete(const KeyValuePair &element) {
+            if (root_ == nullptr) { return false; }
+
+            BaseNode *current_node = root_;
+            while (current_node->GetType() != NodeType::LeafType) {
+                auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+
+                auto iter = static_cast<InnerNode *>(node)->FindLocation(element.first);
+                if (iter == node->End()) {
+                    current_node = std::prev(iter)->second;
+                } else if (iter->first == element.first) {
+                    current_node = iter->second;
+                } else {
+                    current_node = (iter != node->Begin()) ? std::prev(iter)->second : node->GetLowKeyPair().second;
+                }
+            }
+
+            auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+            auto iter = static_cast<LeafNode *>(node)->FindLocation(element.first);
+
+            if (iter == node->End() || iter->first != element.first) {
+                return false; // key not found
+            }
+
+            if (node->GetCurrentSize() >= static_cast<LeafNode *>(node)->GetMinSize()) {
+                // remove key-value pair
+                auto status = node->DeleteElement(iter);
+                BPLUSTREE_ASSERT(status, "deleted element from leaf node");
+
+                return true;
+            }
+
+            // else delete by re-balancing the tree
+            return false;
+        }
+
         std::string ToGraph() {
             if (root_ == nullptr) {
                 return "digraph empty_bplus_tree {}";

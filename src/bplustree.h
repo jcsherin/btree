@@ -284,6 +284,7 @@ namespace bplustree {
         }
 
         int GetMinSize() {
+            // formula from Section 14.3.3.2 B+Tree Deletion
             // size for removal of leaf node = [Ceil((FAN_OUT - 1) / 2)]
             return FastCeilIntDivision(this->GetMaxSize() - 1, 2);
         }
@@ -433,6 +434,9 @@ namespace bplustree {
                 leaf_node_max_size_{p_leaf_node_max_size} {}
 
         ~BPlusTree() { FreeTree(); }
+
+        // Used only for testing
+        BaseNode *GetRoot() { return root_; }
 
         BPlusTreeIterator End() {
             return BPlusTreeIterator::GetEndIterator();
@@ -900,18 +904,6 @@ namespace bplustree {
         }
 
     private:
-
-// @formatter:off
-#ifdef BPLUS_TREE_FRIEND_TEST_ENABLED
-        friend class BPlusTreeTest;
-
-        FRIEND_TEST(BPlusTreeTest, IsEmptyInitially);
-        FRIEND_TEST(BPlusTreeTest, RootIsLeafNode);
-        FRIEND_TEST(BPlusTreeTest, FillRootLeafNode);
-        FRIEND_TEST(BPlusTreeTest, RootLeafNodeWillSplit);
-#endif
-// @formatter: on
-
         BaseNode *root_;
         int inner_node_max_size_;
         int leaf_node_max_size_;

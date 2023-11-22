@@ -747,7 +747,15 @@ namespace bplustree {
              *          and delete N
              *      else if (N has too few values/pointers)
              *      then begin
-             *           
+             *         Let N' be the previous or next child of parent(N)
+             *         Let K' be the key between pointers N and N' in parent(N)
+             *
+             *         if (entries in N and N' can fit in a single node)
+             *         then begin
+             *              // Coalesce nodes
+             *         else begin
+             *              // Redistribution: borrow an entry from N'
+             *         end
              *      end
              */
             return false;

@@ -731,6 +731,25 @@ namespace bplustree {
             }
 
             // else delete by re-balancing the tree
+            /**
+             * Algorithm:
+             *
+             * procedure delete(value K, pointer P)
+             *      find the leaf node
+             *      delete_entry(node N, value K, pointer P)
+             *
+             * procedure delete_entry(node N, value K, pointer P)
+             *      delete (K, P) from N
+             *
+             *      if (N is the root AND N has only one remaining child)
+             *      then
+             *          make the child of N the new root of the tree
+             *          and delete N
+             *      else if (N has too few values/pointers)
+             *      then begin
+             *           
+             *      end
+             */
             return false;
         }
 

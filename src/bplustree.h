@@ -753,6 +753,15 @@ namespace bplustree {
              *         if (entries in N and N' can fit in a single node)
              *         then begin
              *              // Coalesce nodes
+             *              if (N is a predecessor of N') then swap_variables(N, N')
+             *              if (N is not a leaf)
+             *              then
+             *                  append K' and all pointers and values in N to N'
+             *                  (note: the low key pair pointer in N can be paired with
+             *                  K' while appending to N')
+             *              else
+             *                  append all (K_i, P_i) pairs from N to N'
+             *              end
              *         else begin
              *              // Redistribution: borrow an entry from N'
              *         end

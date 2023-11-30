@@ -167,6 +167,22 @@ namespace bplustree {
             return true;
         }
 
+        bool MergeNode(ElasticNode *next_node) {
+            if (this->GetType() != next_node->GetType()) {
+                return false;
+            }
+
+            if (this->GetCurrentSize() + next_node->GetCurrentSize() > this->GetMaxSize()) {
+                return false;
+            }
+
+            std::memmove(reinterpret_cast<void *>(this->End()),
+                         reinterpret_cast<void *>(next_node->Begin()),
+                         next_node->GetCurrentSize() * sizeof(ElementType));
+            SetEnd(this->GetCurrentSize() + next_node->GetCurrentSize());
+            return true;
+        }
+
         BaseNode *GetSiblingLeft() { return sibling_left_; }
 
         BaseNode *GetSiblingRight() { return sibling_right_; }

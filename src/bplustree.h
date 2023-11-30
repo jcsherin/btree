@@ -719,14 +719,10 @@ namespace bplustree {
                 return false; // key not found
             }
 
-            // FIXME: This predicate is wrong because the node can underflow after
-            // the `element` is deleted from the node. This will happen when the
-            // current size is equal to leaf node min size.
-            if (node->GetCurrentSize() >= static_cast<LeafNode *>(node)->GetMinSize()) {
-                // remove key-value pair
-                auto status = node->DeleteElement(iter);
-                BPLUSTREE_ASSERT(status, "deleted element from leaf node");
+            auto status = node->DeleteElement(iter);
+            BPLUSTREE_ASSERT(status, "removed element from leaf node");
 
+            if (node->GetCurrentSize() >= static_cast<LeafNode *>(node)->GetMinSize()) {
                 return true;
             }
 

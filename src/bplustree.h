@@ -322,10 +322,38 @@ namespace bplustree {
             return iter;
         }
 
+        /**
+         * The textbook defines leaf node underflow when it has less than
+         * ⌈(N-1)/2⌉ values. This assumes the fanout is defined as the same
+         * for both inner and leaf nodes. This implementation allows different
+         * values to be set for inner and leaf node fanout. Also a leaf node
+         * unlike an inner node has the same no. of keys and value pairs.
+         *
+         * I assume the (N-1) adjustment exists because leaf nodes have equal
+         * no. of keys and values. But this adjust is not necessary here
+         * because the fanout for leaf node is configured separately from the
+         * inner nodes when a B+Tree instance is instantiated. So to maintain
+         * 50% occupancy we'll compute the minimum as ⌈N/2⌉.
+         *
+         * +---+-------+-----------+
+         * | N | ⌈N/2⌉ | ⌈(N-1)/2⌉ |
+         * +---+-------+-----------+
+         * | 3 |    2  |        1  |
+         * +---+-------+-----------+
+         * | 4 |    2  |        2  |
+         * +---+-------+-----------+
+         *
+         * The implementation choice is ⌈N/2⌉ because it guarantees at least
+         * two values will be present in a leaf node even when the fanout is
+         * as low as 3. In practice you'll not create B+Tree nodes which such
+         * low fanout, but this is here so that we can easily test the B+Tree
+         * behaviour using low fanout numbers.
+         *
+         * @return The minimum no. of key-value pairs which should be present
+         * in the leaf node
+         */
         int GetMinSize() {
-            // formula from Section 14.3.3.2 B+Tree Deletion
-            // size for removal of leaf node = [Ceil((FAN_OUT - 1) / 2)]
-            return FastCeilIntDivision(this->GetMaxSize() - 1, 2);
+            return FastCeilIntDivision(this->GetMaxSize(), 2);
         }
     };
 

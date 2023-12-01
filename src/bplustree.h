@@ -263,9 +263,32 @@ namespace bplustree {
             return iter;
         }
 
+        /**
+         * Calculating minimum occupancy of inner node
+         * -------------------------------------------
+         * Fanout: N    = 4 (node pointers)
+         * No. of keys  = N - 1
+         *              = 4 - 1
+         *              = 3
+         *
+         * Minimum node pointers = ⌈N/2⌉ (14.3.3.2 B+Tree Deletion)
+         *                       = ⌈4/2⌉
+         *                       = 2
+         * Minimum no. of keys   = 2 - 1
+         *                       = 1
+         *
+         * The smallest possible inner node has at least one key and two
+         * node pointers. This is an inner node which has a fanout of
+         * 3 node pointers, and can store a maximum of 2 keys.
+         *
+         * @return The minimum no. of keys which should be present in
+         * the inner node at any point.
+         */
         int GetMinSize() {
-            // size for removal of inner node = [Ceil(FAN_OUT / 2) - 1]
-            return FastCeilIntDivision(this->GetMaxSize(), 2) - 1;
+            int fanout = this->GetMaxSize() + 1;
+            int minimum_fanout = FastCeilIntDivision(fanout, 2);
+
+            return (minimum_fanout - 1);
         }
     };
 

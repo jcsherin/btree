@@ -714,7 +714,45 @@ namespace bplustree {
         bool Delete(const KeyValuePair &element) {
             if (root_ == nullptr) { return false; }
 
+            // Find the leaf node that contains key-value element
+            BaseNode *current = root_;
+            std::vector<BaseNode *> stack{};
+
+            while (current->GetType() != NodeType::LeafType) {
+                auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current);
+
+                stack.push_back(node);
+
+                /**
+                 * When the key at the inner node `location` is an exact match
+                 * for the search key, follow the node pointer down the tree.
+                 *
+                 * The `location` points to the first element where the search
+                 * key < guide key, or the element after the last element. It
+                 * is effectively behaving the same as `std::lower_bound`.
+                 * The inner node contains N keys, and N+1 node pointers. The
+                 * extra node pointer is stored separately from the other node
+                 * pointers. In this implementation the lowest node pointer
+                 * is stored separate from the other <key, node pointer> pairs.
+                 *
+                 * The inner node can never be empty so we do not have to
+                 * explicitly check if `Begin() == End()`. But when the location
+                 * returned is `Begin()` it implies that the search key < guide
+                 * key and we therefore have to follow the previous node pointer
+                 * from this location. This node pointer can be found by calling
+                 * `GetLowKeyPair` method of the inner node.
+                 *
+                 * For every other case, including the one where location is the
+                 * same as `End()`, the node pointer to follow is the previous
+                 * node pointer from the current location.
+                 */
+                auto location = static_cast<InnerNode *>(node)->FindLocation(element.first);
+                if (location != node->End() && location->first == element.first) {
+                    current = location->second;
+                } else if (location == node->Begin()) {
+                    current = node->GetLowKeyPair().second;
                 } else {
+                    current = std::prev(location)->second;
                 }
             }
 

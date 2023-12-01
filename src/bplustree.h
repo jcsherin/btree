@@ -714,71 +714,11 @@ namespace bplustree {
         bool Delete(const KeyValuePair &element) {
             if (root_ == nullptr) { return false; }
 
-            BaseNode *current_node = root_;
-            while (current_node->GetType() != NodeType::LeafType) {
-                auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
-
-                auto iter = static_cast<InnerNode *>(node)->FindLocation(element.first);
-                if (iter == node->End()) {
-                    current_node = std::prev(iter)->second;
-                } else if (iter->first == element.first) {
-                    current_node = iter->second;
                 } else {
-                    current_node = (iter != node->Begin()) ? std::prev(iter)->second : node->GetLowKeyPair().second;
                 }
             }
 
-            auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
-            auto iter = static_cast<LeafNode *>(node)->FindLocation(element.first);
 
-            if (iter == node->End() || iter->first != element.first) {
-                return false; // key not found
-            }
-
-            auto status = node->DeleteElement(iter);
-            BPLUSTREE_ASSERT(status, "removed element from leaf node");
-
-            if (node->GetCurrentSize() >= static_cast<LeafNode *>(node)->GetMinSize()) {
-                return true;
-            }
-
-            // else delete by re-balancing the tree
-            /**
-             * Algorithm:
-             *
-             * procedure delete(value K, pointer P)
-             *      find the leaf node
-             *      delete_entry(node N, value K, pointer P)
-             *
-             * procedure delete_entry(node N, value K, pointer P)
-             *      delete (K, P) from N
-             *
-             *      if (N is the root AND N has only one remaining child)
-             *      then
-             *          make the child of N the new root of the tree
-             *          and delete N
-             *      else if (N has too few values/pointers)
-             *      then begin
-             *         Let N' be the previous or next child of parent(N)
-             *         Let K' be the key between pointers N and N' in parent(N)
-             *
-             *         if (entries in N and N' can fit in a single node)
-             *         then begin
-             *              // Coalesce nodes
-             *              if (N is a predecessor of N') then swap_variables(N, N')
-             *              if (N is not a leaf)
-             *              then
-             *                  append K' and all pointers and values in N to N'
-             *                  (note: the low key pair pointer in N can be paired with
-             *                  K' while appending to N')
-             *              else
-             *                  append all (K_i, P_i) pairs from N to N'
-             *              end
-             *         else begin
-             *              // Redistribution: borrow an entry from N'
-             *         end
-             *      end
-             */
             return false;
         }
 

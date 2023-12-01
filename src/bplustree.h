@@ -807,6 +807,19 @@ namespace bplustree {
                 }
             }
 
+            auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current);
+            auto iter = static_cast<LeafNode *>(node)->FindLocation(element.first);
+
+            if (iter == node->End() || iter->first != element.first) {
+                return false; // key was not found in the tree
+            }
+
+            node->DeleteElement(iter);
+
+            // Check for underflow
+            if (node->GetCurrentSize() >= static_cast<LeafNode *>(node)->GetMinSize()) {
+                return true;
+            }
 
             return false;
         }

@@ -861,7 +861,6 @@ namespace bplustree {
                                 previous_leaf);
                     }
                     previous_leaf->SetSiblingRight(node->GetSiblingRight());
-                    node->FreeElasticNode();
 
                     /**
                      *              +-------------------+
@@ -883,6 +882,12 @@ namespace bplustree {
                      *
                      *  TODO: Remove pivot element from parent inner node
                      */
+
+                    /**
+                     * Free the node only after removing the pivot which
+                     * references this node in the parent inner node.
+                     */
+                    node->FreeElasticNode();
                 }
             }
 

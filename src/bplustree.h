@@ -821,6 +821,71 @@ namespace bplustree {
                 return true;
             }
 
+            auto parent = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(*stack.rbegin());
+            stack.pop_back();
+
+            bool deletion_finished = false;
+
+            // Previous leaf node of node/current in parent
+            ElasticNode<KeyValuePair> *previous_leaf{nullptr};
+            KeyNodePointerPair *pivot;
+            auto guide_key_location = static_cast<InnerNode *>(parent)->FindLocation(element.first);
+            if (guide_key_location != parent->End() && guide_key_location->first == element.first) {
+                if (guide_key_location == parent->Begin()) {
+                    previous_leaf = reinterpret_cast<ElasticNode<KeyValuePair> *>(parent->GetLowKeyPair().second);
+                    pivot = parent->Begin();
+                } else {
+                    previous_leaf = reinterpret_cast<ElasticNode<KeyValuePair> *>(std::prev(
+                            guide_key_location)->second);
+                    pivot = guide_key_location;
+                }
+            } else {
+                if (std::prev(guide_key_location) == parent->Begin()) {
+                    previous_leaf = reinterpret_cast<ElasticNode<KeyValuePair> * >(parent->GetLowKeyPair().second);
+                    pivot = parent->Begin();
+                } else {
+                    previous_leaf = reinterpret_cast<ElasticNode<KeyValuePair> *>(std::prev(
+                            std::prev(guide_key_location))->second);
+                    pivot = std::prev(guide_key_location);
+                }
+            }
+
+            // Will entries fit in previous leaf node?
+            if (previous_leaf != nullptr) {
+                auto merged_node_size = node->GetCurrentSize() + previous_leaf->GetCurrentSize();
+                if (merged_node_size <= previous_leaf->GetMaxSize()) {
+                    previous_leaf->MergeNode(node);
+
+                    if (node->GetSiblingRight() != nullptr) {
+                        reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetSiblingRight())->SetSiblingLeft(
+                                previous_leaf);
+                    }
+                    previous_leaf->SetSiblingRight(node->GetSiblingRight());
+                    node->FreeElasticNode();
+
+                    /**
+                     *              +-------------------+
+                     *              | ... | Pivot | ... |          -- Inner Nodes
+                     *              +-------------------+
+                     *                 /        \
+                     *                /          \
+                     *    +------------+        +--------------+
+                     *    |  Previous  |        |     Node     |   -- Leaf Nodes
+                     *    +------------+        +--------------+
+                     *
+                     *  Pivot is the element which contains the key between
+                     *  the two leaf nodes. The node on the rhs is to be
+                     *  removed after its elements have been appended to
+                     *  the previous leaf node.
+                     *
+                     *  The pivot element now should be removed from the
+                     *  parent inner node.
+                     *
+                     *  TODO: Remove pivot element from parent inner node
+                     */
+                }
+            }
+
             return false;
         }
 

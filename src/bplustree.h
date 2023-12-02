@@ -826,10 +826,11 @@ namespace bplustree {
 
             bool deletion_finished = false;
 
-            // Previous leaf node of node/current in parent
-            ElasticNode<KeyValuePair> *previous_leaf{nullptr};
             KeyNodePointerPair *pivot;
             auto guide_key_location = static_cast<InnerNode *>(parent)->FindLocation(element.first);
+
+            // Previous leaf node of node/current in parent
+            ElasticNode<KeyValuePair> *previous_leaf{nullptr};
             if (guide_key_location != parent->End() && guide_key_location->first == element.first) {
                 if (guide_key_location == parent->Begin()) {
                     previous_leaf = reinterpret_cast<ElasticNode<KeyValuePair> *>(parent->GetLowKeyPair().second);
@@ -888,6 +889,38 @@ namespace bplustree {
                      * references this node in the parent inner node.
                      */
                     node->FreeElasticNode();
+                }
+            }
+
+            // Try merge with next leaf node
+            ElasticNode<KeyValuePair> *next_leaf{nullptr};
+            if (previous_leaf == nullptr) {
+                if (guide_key_location != parent->End() && std::next(guide_key_location) != parent->End() &&
+                    guide_key_location->first == element.first) {
+                    next_leaf = reinterpret_cast<ElasticNode<KeyValuePair> *>(std::next(guide_key_location)->second);
+                    pivot = std::next(guide_key_location);
+                } else if (guide_key_location != parent->End()) {
+                    // invariant: search key < guide key
+                    next_leaf = reinterpret_cast<ElasticNode<KeyValuePair> *>(std::next(guide_key_location)->second);
+                    pivot = std::next(guide_key_location);
+                }
+            }
+
+            // Invariant: There was no previous leaf for merging
+            // Will the contents will in node when merging with next node?
+            if (previous_leaf == nullptr && next_leaf != nullptr) {
+                auto merged_node_size = node->GetCurrentSize() + next_leaf->GetCurrentSize();
+                if (merged_node_size <= node->GetMaxSize()) {
+                    node->MergeNode(next_leaf);
+
+                    if (next_leaf->GetSiblingRight() != nullptr) {
+                        static_cast<ElasticNode<KeyValuePair> *>(next_leaf->GetSiblingRight())->SetSiblingLeft(node);
+                    }
+                    node->SetSiblingRight(next_leaf->GetSiblingRight());
+
+                    // TODO: Remove pivot element from parent node
+
+                    next_leaf->FreeElasticNode();
                 }
             }
 

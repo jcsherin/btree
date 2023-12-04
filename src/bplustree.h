@@ -290,6 +290,44 @@ namespace bplustree {
 
             return (minimum_fanout - 1);
         }
+
+        /**
+         * For a given search key returns the child node, it's previous
+         * sibling and separator element between both the children.
+         *
+         * @param search_key The search key
+         * @return Returns the two consecutive children and pivot
+         * element which separates both children in the inner node.
+         */
+        std::tuple<BaseNode *, BaseNode *, KeyNodePointerPair *>
+        GetPreviousAndCurrentChildrenWithPivot(int search_key) {
+            auto pivot = FindLocation(search_key);
+
+            /**
+             * Returns (previous_child, current_child, pivot_element)
+             */
+            if (pivot != End() && search_key == pivot->first) {
+                if (pivot == Begin()) {
+                    return std::make_tuple(GetLowKeyPair().second, pivot->second, pivot);
+                } else {
+                    return std::make_tuple(std::prev(pivot)->second, pivot->second, pivot);
+                }
+            }
+
+            /**
+             * Returns (previous_child, current_child, pivot_element)
+             */
+            if (pivot != Begin()) {
+                pivot = std::prev(pivot);
+                if (pivot == Begin()) {
+                    return std::make_tuple(GetLowKeyPair().second, pivot->second, pivot);
+                } else {
+                    return std::make_tuple(std::prev(pivot)->second, pivot->second, pivot);
+                }
+            }
+
+            return std::make_tuple(nullptr, nullptr, nullptr);
+        }
     };
 
     class BPlusTree;

@@ -835,39 +835,29 @@ namespace bplustree {
             }
 
             if (!stack.empty()) {
-                std::pair<ElasticNode<KeyValuePair> *, ElasticNode<KeyValuePair> *> consecutive_nodes{nullptr, nullptr};
-                KeyNodePointerPair *separator{nullptr};
-
                 auto parent = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(*stack.rbegin());
                 stack.pop_back();
 
-                auto pivot = static_cast<InnerNode *>(parent)->FindLocation(element.first);
+                /**
+                 * Try merge with previous leaf node
+                 */
+                auto maybe_previous_with_pivot = static_cast<InnerNode *>(parent)->GetPreviousWithSeparator(
+                        element.first);
 
-                if ((pivot != parent->End() && pivot->first == element.first) || (pivot != parent->Begin())) {
-                    // Populate consecutive_nodes like (prev_node, node)
-                    // Populate separator element
-                } else if (pivot != parent->End() &&
-                           (element.first == pivot->first && std::next(pivot) != parent->End())) {
-                    // Populate consecutive_nodes like (node, next_node)
-                    // Populate separator element
-                }
+                if (maybe_previous_with_pivot.has_value()) {
+                    auto previous_leaf = reinterpret_cast<ElasticNode<KeyValuePair> *>((*maybe_previous_with_pivot).first);
+                    auto pivot = (*maybe_previous_with_pivot).second;
 
-                // If this leaf is the root node, the underflow doesn't matter and we need to
-                // return earlier.
-                // TODO: Early return when checking for underflow in leaf node which also root
-                if (consecutive_nodes.first != nullptr && consecutive_nodes.second != nullptr) {
-                    // Merge is not possible without at least one sibling node
-                    auto size_after_merge =
-                            consecutive_nodes.first->GetCurrentSize() + consecutive_nodes.second->GetCurrentSize();
-                    if (size_after_merge <= consecutive_nodes.first->GetMaxSize()) {
-                        // Contents will fit in a single node
-                        consecutive_nodes.first->MergeNode(consecutive_nodes.second);
+                    auto combined_size = previous_leaf->GetCurrentSize() + node->GetCurrentSize();
+                    if (combined_size <= previous_leaf->GetMaxSize()) {
+                        previous_leaf->MergeNode(node);
 
-                        if (consecutive_nodes.second->GetSiblingRight() != nullptr) {
-                            static_cast<ElasticNode<KeyValuePair> *>(consecutive_nodes.second->GetSiblingRight())->SetSiblingLeft(
-                                    consecutive_nodes.first);
+                        if (node->GetSiblingRight() != nullptr) {
+                            reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetSiblingRight())->SetSiblingLeft(
+                                    previous_leaf);
                         }
-                        consecutive_nodes.first->SetSiblingRight(consecutive_nodes.second->GetSiblingRight());
+                        previous_leaf->SetSiblingRight(node->GetSiblingRight());
+
 
                         /**
                          *              +-----------------------+
@@ -891,94 +881,11 @@ namespace bplustree {
                          *  sure there are no more references to the node which is
                          *  going to be freed.
                          */
-                        parent->DeleteElement(separator);
-                        consecutive_nodes.second->FreeElasticNode();
+                        parent->DeleteElement(pivot); // parent node may underflow after this delete
+                        node->FreeElasticNode();
                     }
                 }
             }
-
-
-//            auto parent = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(*stack.rbegin());
-//            stack.pop_back();
-//
-//
-//            KeyNodePointerPair *pivot;
-//            auto guide_key_location = static_cast<InnerNode *>(parent)->FindLocation(element.first);
-//
-//            // Previous leaf node of node/current in parent
-//            ElasticNode<KeyValuePair> *previous_leaf{nullptr};
-//            if (guide_key_location != parent->End() && guide_key_location->first == element.first) {
-//                if (guide_key_location == parent->Begin()) {
-//                    previous_leaf = reinterpret_cast<ElasticNode<KeyValuePair> *>(parent->GetLowKeyPair().second);
-//                    pivot = parent->Begin();
-//                } else {
-//                    previous_leaf = reinterpret_cast<ElasticNode<KeyValuePair> *>(std::prev(
-//                            guide_key_location)->second);
-//                    pivot = guide_key_location;
-//                }
-//            } else {
-//                if (std::prev(guide_key_location) == parent->Begin()) {
-//                    previous_leaf = reinterpret_cast<ElasticNode<KeyValuePair> * >(parent->GetLowKeyPair().second);
-//                    pivot = parent->Begin();
-//                } else {
-//                    previous_leaf = reinterpret_cast<ElasticNode<KeyValuePair> *>(std::prev(
-//                            std::prev(guide_key_location))->second);
-//                    pivot = std::prev(guide_key_location);
-//                }
-//            }
-//
-//            // Will entries fit in previous leaf node?
-//            if (previous_leaf != nullptr) {
-//                auto merged_node_size = node->GetCurrentSize() + previous_leaf->GetCurrentSize();
-//                if (merged_node_size <= previous_leaf->GetMaxSize()) {
-//                    previous_leaf->MergeNode(node);
-//
-//                    if (node->GetSiblingRight() != nullptr) {
-//                        reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetSiblingRight())->SetSiblingLeft(
-//                                previous_leaf);
-//                    }
-//                    previous_leaf->SetSiblingRight(node->GetSiblingRight());
-//
-//
-//                    /**
-//                     * Free the node only after removing the pivot which
-//                     * references this node in the parent inner node.
-//                     */
-//                    node->FreeElasticNode();
-//                }
-//            }
-//
-//            // Try merge with next leaf node
-//            ElasticNode<KeyValuePair> *next_leaf{nullptr};
-//            if (previous_leaf == nullptr) {
-//                if (guide_key_location != parent->End() && std::next(guide_key_location) != parent->End() &&
-//                    guide_key_location->first == element.first) {
-//                    next_leaf = reinterpret_cast<ElasticNode<KeyValuePair> *>(std::next(guide_key_location)->second);
-//                    pivot = std::next(guide_key_location);
-//                } else if (guide_key_location != parent->End()) {
-//                    // invariant: search key < guide key
-//                    next_leaf = reinterpret_cast<ElasticNode<KeyValuePair> *>(std::next(guide_key_location)->second);
-//                    pivot = std::next(guide_key_location);
-//                }
-//            }
-//
-//            // Invariant: There was no previous leaf for merging
-//            // Will the contents will in node when merging with next node?
-//            if (previous_leaf == nullptr && next_leaf != nullptr) {
-//                auto merged_node_size = node->GetCurrentSize() + next_leaf->GetCurrentSize();
-//                if (merged_node_size <= node->GetMaxSize()) {
-//                    node->MergeNode(next_leaf);
-//
-//                    if (next_leaf->GetSiblingRight() != nullptr) {
-//                        static_cast<ElasticNode<KeyValuePair> *>(next_leaf->GetSiblingRight())->SetSiblingLeft(node);
-//                    }
-//                    node->SetSiblingRight(next_leaf->GetSiblingRight());
-//
-//                    // TODO: Remove pivot element from parent node
-//
-//                    next_leaf->FreeElasticNode();
-//                }
-//            }
 
             return false;
         }

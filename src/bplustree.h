@@ -292,41 +292,46 @@ namespace bplustree {
         }
 
         /**
-         * For a given search key returns the child node, it's previous
-         * sibling and separator element between both the children.
          *
-         * @param search_key The search key
-         * @return Returns the two consecutive children and pivot
-         * element which separates both children in the inner node.
+         * @param search_key The key for lower bound search
+         * @return The location of the pivot element in the inner node
+         * which points to the child node
          */
-        std::tuple<BaseNode *, BaseNode *, KeyNodePointerPair *>
-        GetPreviousAndCurrentChildrenWithPivot(int search_key) {
-            auto pivot = FindLocation(search_key);
+        KeyNodePointerPair *FindPivot(int search_key) {
+            auto iter = FindLocation(search_key);
 
-            /**
-             * Returns (previous_child, current_child, pivot_element)
-             */
-            if (pivot != End() && search_key == pivot->first) {
-                if (pivot == Begin()) {
-                    return std::make_tuple(GetLowKeyPair().second, pivot->second, pivot);
-                } else {
-                    return std::make_tuple(std::prev(pivot)->second, pivot->second, pivot);
-                }
+            if (iter != End() && search_key == iter->first) {
+                return iter;
             }
 
-            /**
-             * Returns (previous_child, current_child, pivot_element)
-             */
-            if (pivot != Begin()) {
-                pivot = std::prev(pivot);
-                if (pivot == Begin()) {
-                    return std::make_tuple(GetLowKeyPair().second, pivot->second, pivot);
-                } else {
-                    return std::make_tuple(std::prev(pivot)->second, pivot->second, pivot);
-                }
+            if (iter == Begin() && search_key < iter->first) {
+                return &GetLowKeyPair();
             }
 
-            return std::make_tuple(nullptr, nullptr, nullptr);
+            return std::prev(iter);
+        }
+
+        /**
+         *
+         * @param search_key
+         * @return An optional pair of previous node pointer, and the element
+         * which separates it from the node pointer determined by the search
+         * key. When the search key already points to the left most node
+         * pointer, there is no previous and it returns a null optional.
+         */
+        std::optional<std::pair<BaseNode *, KeyNodePointerPair *>> GetPreviousWithSeparator(int search_key) {
+            auto pivot = FindPivot(search_key);
+
+            // Left most child pointer, has no previous sibling
+            if (pivot->second == GetLowKeyPair().second) {
+                return {};
+            }
+
+            if (pivot == Begin()) {
+                return std::make_tuple(GetLowKeyPair().second, pivot);
+            }
+
+            return std::make_tuple(std::prev(pivot)->second, pivot);
         }
     };
 
@@ -812,37 +817,7 @@ namespace bplustree {
 
                 stack.push_back(node);
 
-                /**
-                 * When the key at the inner node `location` is an exact match
-                 * for the search key, follow the node pointer down the tree.
-                 *
-                 * The `location` points to the first element where the search
-                 * key < guide key, or the element after the last element. It
-                 * is effectively behaving the same as `std::lower_bound`.
-                 * The inner node contains N keys, and N+1 node pointers. The
-                 * extra node pointer is stored separately from the other node
-                 * pointers. In this implementation the lowest node pointer
-                 * is stored separate from the other <key, node pointer> pairs.
-                 *
-                 * The inner node can never be empty so we do not have to
-                 * explicitly check if `Begin() == End()`. But when the location
-                 * returned is `Begin()` it implies that the search key < guide
-                 * key and we therefore have to follow the previous node pointer
-                 * from this location. This node pointer can be found by calling
-                 * `GetLowKeyPair` method of the inner node.
-                 *
-                 * For every other case, including the one where location is the
-                 * same as `End()`, the node pointer to follow is the previous
-                 * node pointer from the current location.
-                 */
-                auto location = static_cast<InnerNode *>(node)->FindLocation(element.first);
-                if (location != node->End() && location->first == element.first) {
-                    current = location->second;
-                } else if (location == node->Begin()) {
-                    current = node->GetLowKeyPair().second;
-                } else {
-                    current = std::prev(location)->second;
-                }
+                current = static_cast<InnerNode *>(node)->FindPivot(element.first)->second;
             }
 
             auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current);

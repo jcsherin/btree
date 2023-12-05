@@ -319,7 +319,7 @@ namespace bplustree {
          * key. When the search key already points to the left most node
          * pointer, there is no previous and it returns a null optional.
          */
-        std::optional<std::pair<BaseNode *, KeyNodePointerPair *>> GetPreviousWithSeparator(int search_key) {
+        std::optional<std::pair<BaseNode *, KeyNodePointerPair *>> MaybePreviousWithSeparator(int search_key) {
             auto pivot = FindPivot(search_key);
 
             // Left most child pointer, has no previous sibling
@@ -332,6 +332,22 @@ namespace bplustree {
             }
 
             return std::make_tuple(std::prev(pivot)->second, pivot);
+        }
+
+        std::optional<std::pair<BaseNode *, KeyNodePointerPair *>> MaybeNextWithSeparator(int search_key) {
+            auto pivot = FindPivot(search_key);
+
+            // Right most element, has no next element
+            if (std::next(pivot) == End()) {
+                return {};
+            }
+
+            if (pivot->second == GetLowKeyPair().second) {
+                return std::make_tuple(Begin()->second, Begin());
+            }
+
+            return std::make_tuple(std::next(pivot)->second, std::next(pivot));
+
         }
     };
 
@@ -841,9 +857,8 @@ namespace bplustree {
                 /**
                  * Try merge with previous leaf node
                  */
-                auto maybe_previous_with_pivot = static_cast<InnerNode *>(parent)->GetPreviousWithSeparator(
+                auto maybe_previous_with_pivot = static_cast<InnerNode *>(parent)->MaybePreviousWithSeparator(
                         element.first);
-
                 if (maybe_previous_with_pivot.has_value()) {
                     auto previous_leaf = reinterpret_cast<ElasticNode<KeyValuePair> *>((*maybe_previous_with_pivot).first);
                     auto pivot = (*maybe_previous_with_pivot).second;
@@ -853,7 +868,7 @@ namespace bplustree {
                         previous_leaf->MergeNode(node);
 
                         if (node->GetSiblingRight() != nullptr) {
-                            reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetSiblingRight())->SetSiblingLeft(
+                            static_cast<ElasticNode<KeyValuePair> *>(node->GetSiblingRight())->SetSiblingLeft(
                                     previous_leaf);
                         }
                         previous_leaf->SetSiblingRight(node->GetSiblingRight());
@@ -883,6 +898,32 @@ namespace bplustree {
                          */
                         parent->DeleteElement(pivot); // parent node may underflow after this delete
                         node->FreeElasticNode();
+                    }
+                }
+
+                /**
+                 * Try merge with next leaf node
+                 */
+                auto maybe_next_with_pivot = static_cast<InnerNode *>(parent)->MaybeNextWithSeparator(element.first);
+                if (maybe_next_with_pivot.has_value()) {
+                    auto next_leaf = reinterpret_cast<ElasticNode<KeyValuePair> *>((*maybe_next_with_pivot).first);
+                    auto pivot = (*maybe_next_with_pivot).second;
+
+                    auto combined_size = node->GetCurrentSize() + next_leaf->GetCurrentSize();
+                    if (combined_size <= node->GetMaxSize()) {
+                        node->MergeNode(next_leaf);
+
+                        if (next_leaf->GetSiblingRight() != nullptr) {
+                            static_cast<ElasticNode<KeyValuePair> *>(next_leaf->GetSiblingRight())->SetSiblingLeft(
+                                    node);
+                        }
+                        node->SetSiblingRight(next_leaf->GetSiblingRight());
+
+                        // Can we be always sure that the `DeleteElement` will be called
+                        // only on node internal array stored elements and never the
+                        // low-key pair?
+                        parent->DeleteElement(pivot); // parent node may underflow after this delete
+                        next_leaf->FreeElasticNode();
                     }
                 }
             }

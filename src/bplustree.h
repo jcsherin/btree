@@ -861,6 +861,7 @@ namespace bplustree {
                 return true;
             }
 
+            ElasticNode<KeyNodePointerPair> *inner_node{nullptr};
             if (!stack.empty()) {
                 auto parent = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(*stack.rbegin());
                 stack.pop_back();
@@ -940,6 +941,11 @@ namespace bplustree {
                     }
                 }
 
+                if (parent->GetCurrentSize() >= static_cast<InnerNode *>(parent)->GetMinSize()) {
+                    return true;
+                }
+
+                inner_node = parent;
             }
 
             return false;

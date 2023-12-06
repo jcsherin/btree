@@ -204,6 +204,8 @@ namespace bplustree {
 
         KeyNodePointerPair &GetLowKeyPair() { return low_key_; }
 
+        void SetLowKeyPair(const KeyNodePointerPair p_low_key) { low_key_ = p_low_key; }
+
         const ElementType &At(const int index) {
             return *(std::next(Begin(), index));
         }
@@ -947,6 +949,69 @@ namespace bplustree {
 
                 inner_node = parent;
             }
+
+            // Re-balances tree
+            while (!stack.empty()) {
+                auto parent = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(*stack.rbegin());
+                stack.pop_back();
+
+                auto maybe_previous = static_cast<InnerNode *>(parent)->MaybePreviousWithSeparator(element.first);
+                if (maybe_previous.has_value()) {
+                    auto other = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>((*maybe_previous).first);
+                    auto pivot = (*maybe_previous).second;
+
+                    bool will_underflow = (other->GetCurrentSize() - 1) < static_cast<InnerNode *>(other)->GetMinSize();
+                    if (!will_underflow) {
+                        auto borrowed = *(other->RBegin());
+                        other->PopEnd();
+
+                        /**
+                         *        (parent)
+                         *       +-------------+
+                         *       |...|Ky,Py|...|
+                         *       +-------------+
+                         *         /       \
+                         *        /         \
+                         *  +---------+    +--------+
+                         *  |...|Kx,Px|    |_,Pl|...|
+                         *  +---------+    +--------+
+                         *   (previous)    (underflow node)
+                         *
+                         *
+                         *        (parent)
+                         *       +-----------------+
+                         *       |...|  Kx,Py  |...|   <- pivot key updated
+                         *       +-----------------+
+                         *         /           \
+                         *        /             \
+                         *  +---------+        +--------------+
+                         *  |...|     |<--+    |_,Px|Ky,Pl|...| <--+
+                         *  +---------+   |    +--------------+    |
+                         *                |                        +-- Low key node pointer updated
+                         *                |                        +-- Old pivot key from parent and previous low key
+                         *                |                            node pointer added as the new first element
+                         *                |
+                         *                +--- last element removed from previous node
+                         */
+                    } else {
+
+                    }
+                } else {
+                    auto maybe_next = static_cast<InnerNode *>(parent)->MaybeNextWithSeparator(element.first);
+                    if (maybe_next.has_value()) {
+
+                    }
+                }
+
+                if (parent->GetCurrentSize() >= static_cast<InnerNode *>(parent)->GetMinSize()) {
+                    return true;
+                }
+
+                inner_node = parent;
+            }
+
+            // Inner node underflow. Tree re-balance needed.
+
 
             return false;
         }

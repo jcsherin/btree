@@ -167,6 +167,17 @@ namespace bplustree {
             return true;
         }
 
+        bool PopEnd() {
+            if (GetCurrentSize() == 0) { return false; }
+            if (GetCurrentSize() == 1) {
+                SetEnd(0);
+                return true;
+            }
+
+            SetEnd(this->GetCurrentSize() - 1);
+            return true;
+        }
+
         bool MergeNode(ElasticNode *next_node) {
             if (this->GetType() != next_node->GetType()) {
                 return false;
@@ -898,6 +909,30 @@ namespace bplustree {
                          */
                         parent->DeleteElement(pivot); // parent node may underflow after this delete
                         node->FreeElasticNode();
+                    } else {
+                        // Redistribution: Borrow one element from previous
+                        node->InsertElementIfPossible(*(previous_leaf->RBegin()), node->Begin());
+                        previous_leaf->PopEnd();
+
+                        /**
+                         * TODO: Perform redistribution/borrow-one before doing a merge.
+                         *
+                         * A merge in the leaf node requires removing one of
+                         * the leaf nodes. The <key, node pointer> pair also
+                         * has to be removed from the parent inner node. This
+                         * can result in the parent node underflow and the
+                         * tree re-balance can continue upto the root of
+                         * the B+Tree.
+                         *
+                         * In the case of borrow-one from sibling, only the
+                         * key part in the pivot/separator element needs to
+                         * be modified for traversals to work correctly. This
+                         * cannot result in a parent underflow since no
+                         * element is being removed. Therefore the delete
+                         * completes immediately if we are able to borrow-one
+                         * from the sibling.
+                         */
+                        pivot->first = node->Begin()->first;
                     }
                 }
 
@@ -924,6 +959,11 @@ namespace bplustree {
                         // low-key pair?
                         parent->DeleteElement(pivot); // parent node may underflow after this delete
                         next_leaf->FreeElasticNode();
+                    } else {
+                        node->InsertElementIfPossible((*next_leaf->Begin()), node->End());
+                        next_leaf->PopBegin();
+
+                        pivot->first = next_leaf->Begin()->first;
                     }
                 }
             }

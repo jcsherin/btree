@@ -866,106 +866,80 @@ namespace bplustree {
                 stack.pop_back();
 
                 /**
-                 * Try merge with previous leaf node
+                 * For re-balancing the tree the under-flowing leaf
+                 * node can either borrow an element from a neighbour
+                 * leaf node connected to the same parent inner node.
+                 *
+                 * We attempt to borrow one element from a neighbour
+                 * leaf node as long as it does not lead to underflow
+                 * of the neighbouring leaf node. If this is not
+                 * possible we then try to merge this node with one
+                 * of th neighbour leaf nodes.
                  */
-                auto maybe_previous_with_pivot = static_cast<InnerNode *>(parent)->MaybePreviousWithSeparator(
-                        element.first);
-                if (maybe_previous_with_pivot.has_value()) {
-                    auto previous_leaf = reinterpret_cast<ElasticNode<KeyValuePair> *>((*maybe_previous_with_pivot).first);
-                    auto pivot = (*maybe_previous_with_pivot).second;
 
-                    auto combined_size = previous_leaf->GetCurrentSize() + node->GetCurrentSize();
-                    if (combined_size <= previous_leaf->GetMaxSize()) {
-                        previous_leaf->MergeNode(node);
+                auto maybe_previous = static_cast<InnerNode *>(parent)->MaybePreviousWithSeparator(element.first);
+                if (maybe_previous.has_value()) {
+                    auto other = reinterpret_cast<ElasticNode<KeyValuePair> *>((*maybe_previous).first);
+                    auto pivot = (*maybe_previous).second;
 
-                        if (node->GetSiblingRight() != nullptr) {
-                            static_cast<ElasticNode<KeyValuePair> *>(node->GetSiblingRight())->SetSiblingLeft(
-                                    previous_leaf);
-                        }
-                        previous_leaf->SetSiblingRight(node->GetSiblingRight());
-
-
-                        /**
-                         *              +-----------------------+
-                         *              | ... | Separator | ... |   -- Inner Nodes
-                         *              +-----------------------+
-                         *                 /            \
-                         *                /              \
-                         *    +----------+        +----------+
-                         *    |  First   |        | Second   |      -- Leaf Nodes
-                         *    +----------+        +----------+
-                         *
-                         *  Separator is the <key, node pointer> element pair which
-                         *  separates the first and second sibling leaf nodes. After
-                         *  appending elements in second leaf node into the first
-                         *  leaf node, the second leaf node can be removed from
-                         *  the tree and it's resources freed.
-                         *
-                         *  The node pointer in the separator element references
-                         *  the second node which is to be released. So this element
-                         *  has to be removed from the parent node. Then we can be
-                         *  sure there are no more references to the node which is
-                         *  going to be freed.
-                         */
-                        parent->DeleteElement(pivot); // parent node may underflow after this delete
-                        node->FreeElasticNode();
-                    } else {
-                        // Redistribution: Borrow one element from previous
-                        node->InsertElementIfPossible(*(previous_leaf->RBegin()), node->Begin());
-                        previous_leaf->PopEnd();
-
-                        /**
-                         * TODO: Perform redistribution/borrow-one before doing a merge.
-                         *
-                         * A merge in the leaf node requires removing one of
-                         * the leaf nodes. The <key, node pointer> pair also
-                         * has to be removed from the parent inner node. This
-                         * can result in the parent node underflow and the
-                         * tree re-balance can continue upto the root of
-                         * the B+Tree.
-                         *
-                         * In the case of borrow-one from sibling, only the
-                         * key part in the pivot/separator element needs to
-                         * be modified for traversals to work correctly. This
-                         * cannot result in a parent underflow since no
-                         * element is being removed. Therefore the delete
-                         * completes immediately if we are able to borrow-one
-                         * from the sibling.
-                         */
+                    bool will_underflow = (other->GetCurrentSize() - 1) < static_cast<LeafNode *>(other)->GetMinSize();
+                    if (!will_underflow) {
+                        node->InsertElementIfPossible((*other->RBegin()), node->Begin());
+                        other->PopEnd();
                         pivot->first = node->Begin()->first;
-                    }
-                }
 
-                /**
-                 * Try merge with next leaf node
-                 */
-                auto maybe_next_with_pivot = static_cast<InnerNode *>(parent)->MaybeNextWithSeparator(element.first);
-                if (maybe_next_with_pivot.has_value()) {
-                    auto next_leaf = reinterpret_cast<ElasticNode<KeyValuePair> *>((*maybe_next_with_pivot).first);
-                    auto pivot = (*maybe_next_with_pivot).second;
+                        BPLUSTREE_ASSERT(node->GetCurrentSize() >= static_cast<LeafNode *>(node)->GetMinSize(),
+                                         "node meets minimum occupancy requirement after borrow from previous leaf node");
+                        BPLUSTREE_ASSERT(other->GetCurrentSize() >= static_cast<LeafNode *>(other)->GetMinSize(),
+                                         "borrowing one element did not cause underflow in previous leaf node");
 
-                    auto combined_size = node->GetCurrentSize() + next_leaf->GetCurrentSize();
-                    if (combined_size <= node->GetMaxSize()) {
-                        node->MergeNode(next_leaf);
-
-                        if (next_leaf->GetSiblingRight() != nullptr) {
-                            static_cast<ElasticNode<KeyValuePair> *>(next_leaf->GetSiblingRight())->SetSiblingLeft(
-                                    node);
-                        }
-                        node->SetSiblingRight(next_leaf->GetSiblingRight());
-
-                        // Can we be always sure that the `DeleteElement` will be called
-                        // only on node internal array stored elements and never the
-                        // low-key pair?
-                        parent->DeleteElement(pivot); // parent node may underflow after this delete
-                        next_leaf->FreeElasticNode();
+                        return true;
                     } else {
-                        node->InsertElementIfPossible((*next_leaf->Begin()), node->End());
-                        next_leaf->PopBegin();
+                        BPLUSTREE_ASSERT(other->GetCurrentSize() + node->GetCurrentSize() <= node->GetMaxSize(),
+                                         "contents will fit a single leaf node after merge");
+                        other->MergeNode(node);
+                        if (node->GetSiblingRight() != nullptr) {
+                            static_cast<LeafNode *>(node->GetSiblingRight())->SetSiblingLeft(other);
+                        }
+                        other->SetSiblingRight(node->GetSiblingRight());
 
-                        pivot->first = next_leaf->Begin()->first;
+                        parent->DeleteElement(pivot);
+                        node->FreeElasticNode();
+                    }
+                } else {
+                    auto maybe_next = static_cast<InnerNode *>(parent)->MaybeNextWithSeparator(element.first);
+                    if (maybe_next.has_value()) {
+                        auto other = reinterpret_cast<ElasticNode<KeyValuePair> *>((*maybe_next).first);
+                        auto pivot = (*maybe_next).second;
+
+                        bool will_underflow =
+                                (other->GetCurrentSize() - 1) < static_cast<LeafNode *>(other)->GetMinSize();
+                        if (!will_underflow) {
+                            node->InsertElementIfPossible((*other->Begin()), node->End());
+                            other->PopBegin();
+                            pivot->first = other->Begin()->first;
+
+                            BPLUSTREE_ASSERT(node->GetCurrentSize() >= static_cast<LeafNode *>(node)->GetMinSize(),
+                                             "node meets minimum occupancy requirement after borrow from previous leaf node");
+                            BPLUSTREE_ASSERT(other->GetCurrentSize() >= static_cast<LeafNode *>(other)->GetMinSize(),
+                                             "borrowing one element did not cause underflow in previous leaf node");
+
+                            return true;
+                        } else {
+                            BPLUSTREE_ASSERT(other->GetCurrentSize() + node->GetCurrentSize() <= node->GetMaxSize(),
+                                             "contents will fit a single leaf node after merge");
+                            node->MergeNode(other);
+                            if (other->GetSiblingRight() != nullptr) {
+                                static_cast<LeafNode *>(other->GetSiblingRight())->SetSiblingLeft(node);
+                            }
+                            node->SetSiblingRight(other->GetSiblingRight());
+
+                            parent->DeleteElement(pivot);
+                            other->FreeElasticNode();
+                        }
                     }
                 }
+
             }
 
             return false;

@@ -999,7 +999,41 @@ namespace bplustree {
                 } else {
                     auto maybe_next = static_cast<InnerNode *>(parent)->MaybeNextWithSeparator(element.first);
                     if (maybe_next.has_value()) {
+                        auto other = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>((*maybe_previous).first);
+                        auto pivot = (*maybe_previous).second;
 
+                        bool will_underflow = (other->GetCurrentSize() - 1) < static_cast<InnerNode *>(other)->GetMinSize();
+                        if (!will_underflow) {
+
+                            /**
+                             *        (parent)
+                             *       +-------------+
+                             *       |...|Ky,Py|...|
+                             *       +-------------+
+                             *        /       \
+                             *       /         \
+                             *  +-------+    +--------------------+
+                             *  |...|...|    |_,Pl|Ko,Po|Ki,Pi|...|
+                             *  +-------+    +--------------------+
+                             *  (underflow) (next node)
+                             *
+                             *
+                             *             (parent)
+                             *            +-------------+
+                             *            |...|Ko,Py|...|
+                             *            +-------------+
+                             *             /      \
+                             *           /         \
+                             *  +---------+       +--------------+
+                             *  |...|Ky,Pl|<--+   |_,Po|Ki,Pi|...|<--+
+                             *  +---------+   |   +--------------+   |
+                             *                |                      |
+                             *                |                      +-- Low key node pointer removed
+                             *                |                      +-- First node pointer moved to low key node pointer
+                             *                |
+                             *                +-- Old Pivot + Low key node pointer from next node added as last element
+                             */
+                        }
                     }
                 }
 

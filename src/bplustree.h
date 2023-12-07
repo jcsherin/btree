@@ -965,6 +965,12 @@ namespace bplustree {
                         auto borrowed = *(other->RBegin());
                         other->PopEnd();
 
+                        inner_node->InsertElementIfPossible(
+                                std::make_pair(pivot->first, inner_node->GetLowKeyPair().second),
+                                inner_node->Begin());
+                        inner_node->SetLowKeyPair(std::make_pair(pivot->first, borrowed.second));
+
+                        pivot->first = borrowed.first;
                         /**
                          *        (parent)
                          *       +-------------+

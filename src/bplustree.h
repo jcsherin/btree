@@ -1000,7 +1000,14 @@ namespace bplustree {
                          *                +--- last element removed from previous node
                          */
                     } else {
+                        other->InsertElementIfPossible(
+                                std::make_pair(pivot->first, inner_node->GetLowKeyPair().second),
+                                other->End()
+                        );
+                        other->MergeNode(inner_node);
 
+                        parent->DeleteElement(pivot);
+                        inner_node->FreeElasticNode();
                     }
                 } else {
                     auto maybe_next = static_cast<InnerNode *>(parent)->MaybeNextWithSeparator(element.first);

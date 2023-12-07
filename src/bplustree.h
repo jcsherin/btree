@@ -1008,7 +1008,8 @@ namespace bplustree {
                         auto other = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>((*maybe_previous).first);
                         auto pivot = (*maybe_previous).second;
 
-                        bool will_underflow = (other->GetCurrentSize() - 1) < static_cast<InnerNode *>(other)->GetMinSize();
+                        bool will_underflow =
+                                (other->GetCurrentSize() - 1) < static_cast<InnerNode *>(other)->GetMinSize();
                         if (!will_underflow) {
 
                             /**

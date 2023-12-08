@@ -1018,7 +1018,15 @@ namespace bplustree {
                         bool will_underflow =
                                 (other->GetCurrentSize() - 1) < static_cast<InnerNode *>(other)->GetMinSize();
                         if (!will_underflow) {
+                            auto borrowed = *(other->Begin());
+                            other->PopBegin();
 
+                            inner_node->InsertElementIfPossible(
+                                    std::make_pair(pivot->first, other->GetLowKeyPair().second),
+                                    inner_node->End()
+                            );
+                            other->SetLowKeyPair(std::make_pair(pivot->first, borrowed.second));
+                            pivot->first = borrowed.first;
                             /**
                              *        (parent)
                              *       +-------------+

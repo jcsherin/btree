@@ -1075,8 +1075,24 @@ namespace bplustree {
                 inner_node = parent;
             }
 
-            // Inner node underflow. Tree re-balance needed.
+            /**
+             * Reduce tree depth if root node has insufficient children
+             */
+            if (inner_node != nullptr) {
+                BPLUSTREE_ASSERT(inner_node == root_, "delete returned back to root node");
+                if (inner_node->GetCurrentSize() > 0) { return true; }
 
+                /*
+                 * Root node contains only a single child pointer, so we
+                 * promote that child as the new root of the B+Tree and
+                 * free the old root.
+                 */
+                auto old_root = root_;
+                root_ = inner_node->GetLowKeyPair().second;
+
+                static_cast<InnerNode *>(old_root)->FreeElasticNode();
+                return true;
+            }
 
             return false;
         }

@@ -1055,6 +1055,15 @@ namespace bplustree {
                              *                |
                              *                +-- Old Pivot + Low key node pointer from next node added as last element
                              */
+                        } else {
+                            inner_node->InsertElementIfPossible(
+                                    std::make_pair(pivot->first, other->GetLowKeyPair().second),
+                                    inner_node->End()
+                            );
+                            inner_node->MergeNode(other);
+
+                            parent->DeleteElement(pivot);
+                            other->FreeElasticNode();
                         }
                     }
                 }

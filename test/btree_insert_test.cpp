@@ -21,4 +21,23 @@ namespace bplustree {
 
         EXPECT_EQ(index.FindValueOfKey(111), 222);
     }
+
+    TEST(BPlusTreeInsertTest, FillRootNode) {
+        BPlusTree index{3, 4};
+        index.Insert(std::make_pair(1, 1));
+
+        index.Insert(std::make_pair(2, 2));
+        index.Insert(std::make_pair(3, 3));
+        index.Insert(std::make_pair(4, 4));
+
+        auto root = static_cast<ElasticNode<KeyValuePair> *>(index.GetRoot());
+        EXPECT_EQ(root->GetType(), NodeType::LeafType);
+        EXPECT_EQ(root->GetMaxSize(), 4);
+        EXPECT_EQ(root->GetCurrentSize(), 4);
+
+        EXPECT_EQ(index.FindValueOfKey(1), 1);
+        EXPECT_EQ(index.FindValueOfKey(2), 2);
+        EXPECT_EQ(index.FindValueOfKey(3), 3);
+        EXPECT_EQ(index.FindValueOfKey(4), 4);
+    }
 }

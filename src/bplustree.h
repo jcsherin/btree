@@ -833,6 +833,7 @@ namespace bplustree {
             return true;
         }
 
+        // TODO: Change parameter to key after making B+Tree generic
         bool Delete(const KeyValuePair &element) {
             if (root_ == nullptr) { return false; }
 

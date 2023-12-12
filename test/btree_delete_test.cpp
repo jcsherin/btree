@@ -14,5 +14,8 @@ namespace bplustree {
 
         auto deleted = index.Delete(std::make_pair(1, 1));
         EXPECT_TRUE(deleted);
+
+        auto new_root = static_cast<ElasticNode<KeyValuePair> *>(index.GetRoot());
+        EXPECT_EQ(new_root, nullptr);
     }
 }

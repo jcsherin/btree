@@ -689,7 +689,6 @@ namespace bplustree {
                 }
             }
 
-            std::cout << "Releasing nodes: " << free_queue.size() << std::endl;
             while (!free_queue.empty()) {
                 auto current_node = free_queue.front();
                 free_queue.pop();

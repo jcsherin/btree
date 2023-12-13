@@ -59,4 +59,35 @@ namespace bplustree {
         EXPECT_EQ(index.FindValueOfKey(4), 4);
         EXPECT_EQ(index.FindValueOfKey(5), 5);
     }
+
+    TEST(BPlusTreeInsertTest, VerifySortedForwardAndBackward) {
+        auto index = bplustree::BPlusTree(3, 4);
+
+        int upper_bound = 512;
+        std::vector<int> v(upper_bound);
+        std::iota(v.begin(), v.end(), 0);
+
+        for (auto &x: v) {
+            index.Insert(std::make_pair(x, x));
+        }
+
+        for (int i = 0; i < upper_bound; ++i) {
+            EXPECT_TRUE(index.FindValueOfKey(i).has_value());
+        }
+
+        // Forward Iteration
+        int previous_key = -1;
+        for (auto iter = index.Begin(); iter != index.End(); ++iter) {
+            EXPECT_TRUE((*iter).first > previous_key);
+            previous_key = (*iter).first;
+        }
+
+        // Backward Iteration
+        int next_key = upper_bound;
+        for (auto iter = index.RBegin(); iter != index.REnd(); --iter) {
+            EXPECT_TRUE((*iter).first < next_key);
+            next_key = (*iter).first;
+        }
+    }
+
 }

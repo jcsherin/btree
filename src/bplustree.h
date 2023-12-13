@@ -858,8 +858,23 @@ namespace bplustree {
 
             node->DeleteElement(iter);
 
-            // Check for underflow
-            if (node->GetCurrentSize() >= static_cast<LeafNode *>(node)->GetMinSize()) {
+            /**
+             * If we removed the last key-value element in the tree
+             * then reset the B+Tree root.
+             */
+            if (node == root_ && node->GetCurrentSize() == 0) {
+                root_ = nullptr;
+                return true;
+            }
+
+            /**
+             * If the leaf node happens to be also the root node
+             * checking for underflow doesn't make sense since this
+             * is the only node in the B+Tree.
+             */
+            if (node == root_ && node->GetCurrentSize() > 0) {
+                return true;
+            } else if (node->GetCurrentSize() >= static_cast<LeafNode *>(node)->GetMinSize()) { // check for underflow
                 return true;
             }
 

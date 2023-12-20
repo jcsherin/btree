@@ -18,7 +18,18 @@ namespace bplustree {
             EXPECT_TRUE(deleted);
             EXPECT_EQ(index.FindValueOfKey(i), std::nullopt);
         }
+    }
 
+    TEST(BPlusTreeDeleteTest, DeleteNonExistentKey) {
+        BPlusTree index{3, 4};
+
+        for (int i = 0; i < 4; ++i) {
+            index.Insert(std::make_pair(i, i));
+
+            EXPECT_EQ(index.FindValueOfKey(i), i);
+        }
+
+        EXPECT_FALSE(index.Delete(std::make_pair(4, 4)));
     }
 
     TEST(BPlusTreeDeleteTest, RootUnderflowAllowed) {
@@ -39,4 +50,5 @@ namespace bplustree {
         ASSERT_EQ(root->GetCurrentSize(), 1);
         EXPECT_EQ(root, index.GetRoot());
     }
+
 }

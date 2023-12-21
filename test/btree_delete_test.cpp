@@ -197,4 +197,78 @@ namespace bplustree {
         }
     }
 
+    TEST(BPlusTreeDeleteTest, MergeWithPreviousLeafNode) {
+
+        auto index = bplustree::BPlusTree(3, 4);
+
+        index.Insert(std::make_pair(1, 1));
+        index.Insert(std::make_pair(3, 3));
+        index.Insert(std::make_pair(5, 5));
+        index.Insert(std::make_pair(7, 7));
+        index.Insert(std::make_pair(9, 9));
+
+        index.Insert(std::make_pair(8, 8));
+        index.Insert(std::make_pair(6, 6));
+        index.Insert(std::make_pair(4, 4));
+        index.Insert(std::make_pair(2, 2));
+
+        /**
+         *
+         * B+Tree structure after the above sequence of insertions.
+         *
+         *                +---------------------------+
+         *                | Low Key | (5, *) | (8, *) |
+         *                +---------------------------+
+         *                 /           |           \
+         *                /            |            \
+         *   +---------------+   +-----------+    +-------+
+         *   | 1 | 2 | 3 | 4 |   | 5 | 6 | 7 |    | 8 | 9 |
+         *   +---------------+   +-----------+    +-------+
+         *       (leaf1)            (leaf2)         (leaf3)
+         *
+         *
+         *   Removing one key from `leaf3` and it will borrow one
+         *   from `leaf2` to prevent underflow. Remove one more key
+         *   again from `leaf3` and it cannot borrow from `leaf2`
+         *   anymore because that will cause in an underflow in
+         *   `leaf2`. So the only option here is for `leaf3` to
+         *   merge with `leaf2`.
+         *
+         *   After removing key 8, then 7:
+         *
+         *                +------------------+
+         *                | Low Key | (5, *) | <-- Transition key to `leaf3` removed from parent
+         *                +------------------+
+         *                 /             |
+         *                /              |
+         *   +---------------+   +-----------+
+         *   | 1 | 2 | 3 | 4 |   | 5 | 6 | 9 |
+         *   +---------------+   +-----------+
+         *       (leaf1)          (leaf2)
+         *
+         *  Since `leaf3` doesn't exist anymore its pivot element in
+         *  parent node is also removed.
+         */
+
+        index.Delete(std::make_pair(8, 8));
+        EXPECT_EQ(index.FindValueOfKey(8), std::nullopt);
+
+        index.Delete(std::make_pair(7, 7));
+        EXPECT_EQ(index.FindValueOfKey(7), std::nullopt);
+
+        EXPECT_EQ(index.GetRoot()->GetType(), NodeType::InnerType);
+        auto root = static_cast<InnerNode *>(index.GetRoot());
+        EXPECT_EQ(root->GetCurrentSize(), 1);
+
+        auto leaf2 = static_cast<LeafNode *>(root->FindPivot(9)->second);
+        EXPECT_EQ(leaf2->GetSiblingRight(), nullptr);
+        EXPECT_EQ(leaf2->GetCurrentSize(), 3);
+
+        std::vector keys{1, 2, 3, 4, 5, 6, 9};
+        int i = 0;
+        for (auto iter = index.Begin(); iter != index.End(); ++iter) {
+            EXPECT_EQ((*iter).first, keys[i++]);
+        }
+    }
+
 }

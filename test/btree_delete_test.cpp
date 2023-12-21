@@ -271,4 +271,72 @@ namespace bplustree {
         }
     }
 
+    TEST(BPlusTreeDeleteTest, BorrowOneFromNextLeafNode) {
+        auto index = bplustree::BPlusTree(3, 4);
+
+        index.Insert(std::make_pair(1, 1));
+        index.Insert(std::make_pair(3, 3));
+        index.Insert(std::make_pair(5, 5));
+        index.Insert(std::make_pair(7, 7));
+        index.Insert(std::make_pair(9, 9));
+        index.Insert(std::make_pair(11, 11));
+
+
+        /**
+         *
+         * B+Tree structure after the above sequence of insertions.
+         *
+         *                +------------------+
+         *                | Low Key | (5, *) |
+         *                +------------------+
+         *                 /           |
+         *                /            |
+         *           +-------+   +----------------+
+         *           | 1 | 3 |   | 5 | 7 | 9 | 11 |
+         *           +-------+   +----------------+
+         *            (leaf1)     (leaf2)
+         *
+         *   Removing a single key, either 1  or 3 from `leaf1` will
+         *   cause underflow. This is rectified by borrowing one element
+         *   from the next sibling leaf node `leaf2`.
+         *
+         *   After removing key 1:
+         *
+         *                +------------------+
+         *                | Low Key | (7, *) | <-- Transition key updated to 7
+         *                +------------------+
+         *                 /           |
+         *                /            |
+         *           +-------+   +------------+
+         *           | 3 | 5 |   | 7 | 9 | 11 |
+         *           +-------+   +------------+
+         *            (leaf1)     (leaf2)
+         *
+         *   The element corresponding to key: 5 is borrowed from `leaf2`
+         *   in to `leaf1`. The transition key for `leaf2` is also updated
+         *   in the parent node.
+         */
+
+        index.Delete(std::make_pair(1, 1));
+        EXPECT_EQ(index.FindValueOfKey(1), std::nullopt);
+
+        EXPECT_EQ(index.GetRoot()->GetType(), NodeType::InnerType);
+        auto root = static_cast<InnerNode *>(index.GetRoot());
+        EXPECT_EQ(root->GetCurrentSize(), 1);
+
+        auto pivot = root->FindPivot(9);
+        EXPECT_EQ(pivot->first, 7);
+
+        auto leaf1 = static_cast<LeafNode *>(root->GetLowKeyPair().second);
+        EXPECT_EQ(leaf1->GetCurrentSize(), 2);
+
+        auto leaf2 = static_cast<LeafNode *>(leaf1->GetSiblingRight());
+        EXPECT_EQ(leaf2->GetCurrentSize(), 3);
+
+        std::vector keys{3, 5, 7, 9, 11};
+        int i = 0;
+        for (auto iter = index.Begin(); iter != index.End(); ++iter) {
+            EXPECT_EQ((*iter).first, keys[i++]);
+        }
+    }
 }

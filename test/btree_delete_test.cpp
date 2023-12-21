@@ -339,4 +339,69 @@ namespace bplustree {
             EXPECT_EQ((*iter).first, keys[i++]);
         }
     }
+
+    TEST(BPlusTreeDeleteTest, MergeWithNextLeafNode) {
+
+        auto index = bplustree::BPlusTree(3, 4);
+
+        index.Insert(std::make_pair(1, 1));
+        index.Insert(std::make_pair(3, 3));
+        index.Insert(std::make_pair(5, 5));
+        index.Insert(std::make_pair(7, 7));
+        index.Insert(std::make_pair(9, 9));
+        index.Insert(std::make_pair(11, 11));
+        index.Insert(std::make_pair(13, 13));
+
+        /**
+         *
+         * B+Tree structure after the above sequence of insertions.
+         *
+         *                +---------------------------+
+         *                | Low Key | (5, *) | (9, *) |
+         *                +---------------------------+
+         *                 /           |           \
+         *                /            |            \
+         *          +-------+       +-------+    +-------------+
+         *          | 1 | 3 |       | 5 | 7 |    | 9 | 11 | 13 |
+         *          +-------+       +-------+    +-------------+
+         *           (leaf1)         (leaf2)         (leaf3)
+         *
+         *
+         * Removing one key from `leaf1` either 1 or 3 will cause
+         * it to underflow then merge with `leaf2`.
+         *
+         * After removing key 1:
+         *
+         *                +------------------+
+         *                | Low Key | (9, *) | <-- Transition key to `leaf2` removed
+         *                +------------------+
+         *                 /             |
+         *                /              |
+         *          +-----------+    +-------------+
+         *          | 3 | 5 | 7 |    | 9 | 11 | 13 |
+         *          +-----------+    +-------------+
+         *
+         *  On merging `leaf1` and `leaf3` in the original B+Tree
+         *  one of the node pointers in the parent node has to be
+         *  removed. Here the transition key 5 and the corresponding
+         *  node pointer is removed from the parent node.
+         */
+
+        index.Delete(std::make_pair(1, 1));
+        EXPECT_EQ(index.FindValueOfKey(1), std::nullopt);
+
+        EXPECT_EQ(index.GetRoot()->GetType(), NodeType::InnerType);
+        auto root = static_cast<InnerNode *>(index.GetRoot());
+        EXPECT_EQ(root->GetCurrentSize(), 1);
+
+        auto leaf1 = static_cast<LeafNode *>(root->GetLowKeyPair().second);
+        EXPECT_EQ(leaf1->GetCurrentSize(), 3);
+
+        std::vector keys{3, 5, 7, 9, 11, 13};
+        int i = 0;
+        for (auto iter = index.Begin(); iter != index.End(); ++iter) {
+            EXPECT_EQ((*iter).first, keys[i++]);
+        }
+    }
+
 }

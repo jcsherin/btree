@@ -120,6 +120,80 @@ namespace bplustree {
             ASSERT_EQ((*iter).first, current_keys[i++]);
         }
     }
+
+    TEST(BPlusTreeDeleteTest, BorrowOneFromPreviousLeafNode) {
+        auto index = bplustree::BPlusTree(3, 4);
+
+        index.Insert(std::make_pair(1, 1));
+        index.Insert(std::make_pair(3, 3));
+        index.Insert(std::make_pair(5, 5));
+        index.Insert(std::make_pair(7, 7));
+        index.Insert(std::make_pair(9, 9));
+
+        index.Insert(std::make_pair(8, 8));
+        index.Insert(std::make_pair(6, 6));
+        index.Insert(std::make_pair(4, 4));
+        index.Insert(std::make_pair(2, 2));
+
+        /**
+         *
+         * B+Tree structure after the above sequence of insertions.
+         *
+         *                +---------------------------+
+         *                | Low Key | (5, *) | (8, *) |
+         *                +---------------------------+
+         *                 /           |           \
+         *                /            |            \
+         *   +---------------+   +-----------+    +-------+
+         *   | 1 | 2 | 3 | 4 |   | 5 | 6 | 7 |    | 8 | 9 |
+         *   +---------------+   +-----------+    +-------+
+         *       (leaf1)            (leaf2)         (leaf3)
+         *
+         *   Removing a single key, either 8 or 9 from `leaf3` node will
+         *   cause it to underflow. It will then borrow one key-value
+         *   element from it's previous sibling `leaf2`.
+         *
+         *   After removing key 8:
+         *
+         *                +---------------------------+
+         *                | Low Key | (5, *) | (7, *) | <-- Transition key updated in parent node for `leaf3`
+         *                +---------------------------+
+         *                 /           |         \
+         *                /            |          \
+         *   +---------------+   +-------+    +-------+
+         *   | 1 | 2 | 3 | 4 |   | 5 | 6 |    | 7 | 9 |
+         *   +---------------+   +-------+    +-------+
+         *       (leaf1)          (leaf2)      (leaf3)
+         *
+         *  The structure of the B+Tree remains the same. But because
+         *  we borrowed a key-value element from the previous sibling
+         *  the transition key for `leaf3` has to be updated in its
+         *  parent node. The borrowed key is 7 and in the parent we
+         *  therefore change it from 8 to 7.
+         */
+
+        index.Delete(std::make_pair(8, 8));
+        EXPECT_EQ(index.FindValueOfKey(8), std::nullopt);
+
+        EXPECT_EQ(index.GetRoot()->GetType(), NodeType::InnerType);
+        auto root = static_cast<InnerNode *>(index.GetRoot());
+        EXPECT_EQ(root->GetCurrentSize(), 2);
+
+        auto pivot = root->FindPivot(8);
+        EXPECT_EQ(pivot->first, 7);
+
+        EXPECT_EQ(pivot->second->GetType(), NodeType::LeafType);
+        auto leaf = static_cast<LeafNode *>(pivot->second);
+
+        EXPECT_EQ(leaf->GetCurrentSize(), 2);
+
+        auto previous_leaf = static_cast<LeafNode *>(leaf->GetSiblingLeft());
+        EXPECT_EQ(leaf->GetCurrentSize(), 2);
+
+        std::vector keys{1, 2, 3, 4, 5, 6, 7, 9};
+        int i = 0;
+        for (auto iter = index.Begin(); iter != index.End(); ++iter) {
+            EXPECT_EQ((*iter).first, keys[i++]);
         }
     }
 

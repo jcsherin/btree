@@ -116,8 +116,10 @@ namespace bplustree {
 
         int i = 0;
         // Iterate over remaining keys in order - 1, 2, 3, 5
-        for (auto iter = index.Begin(); iter != index.End(); ++iter, ++i) {
-            ASSERT_EQ((*iter).first, current_keys[i]);
+        for (auto iter = index.Begin(); iter != index.End(); ++iter) {
+            ASSERT_EQ((*iter).first, current_keys[i++]);
+        }
+    }
         }
     }
 

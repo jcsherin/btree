@@ -487,6 +487,12 @@ namespace bplustree {
         EXPECT_EQ(pivot_inner2->first, 27);
         EXPECT_EQ(inner2->GetCurrentSize(), 1);
         EXPECT_EQ(inner1->GetCurrentSize(), 1);
+
+        std::vector remaining_keys{3, 6, 18, 21, 24, 27, 30, 33, 36, 39, 42, 45, 48, 51, 52};
+        int i = 0;
+        for (auto iter = index.Begin(); iter != index.End(); ++iter) {
+            EXPECT_EQ((*iter).first, remaining_keys[i++]);
+        }
     }
 
 }

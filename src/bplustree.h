@@ -1027,8 +1027,8 @@ namespace bplustree {
                 } else {
                     auto maybe_next = static_cast<InnerNode *>(parent)->MaybeNextWithSeparator(element.first);
                     if (maybe_next.has_value()) {
-                        auto other = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>((*maybe_previous).first);
-                        auto pivot = (*maybe_previous).second;
+                        auto other = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>((*maybe_next).first);
+                        auto pivot = (*maybe_next).second;
 
                         bool will_underflow =
                                 (other->GetCurrentSize() - 1) < static_cast<InnerNode *>(other)->GetMinSize();

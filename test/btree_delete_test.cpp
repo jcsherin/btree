@@ -681,4 +681,99 @@ namespace bplustree {
         }
     }
 
+    TEST(BPlusTreeDeleteTest, MergeWithPreviousInnerNode) {
+        auto index = bplustree::BPlusTree(3, 3);
+
+        std::vector insert_keys{3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39, 42, 45, 48, 51, 52};
+        for (auto &x: insert_keys) {
+            index.Insert(std::make_pair(x, x));
+        }
+
+        /**
+         * Original B+Tree:
+         *                                          (root)
+         *                                  +-----------------------+
+         *                                  | * | (21, *) | (39, *) |
+         *                                  +-----------------------+
+         *                                 /           |             \
+         *                               /             |              \
+         *                  +----------------+  +-----------------+  +-----------------+
+         *                  |*|(9, *)|(15, *)|  |*|(27, *)|(33, *)|  |*|(45, *)|(51, *)|
+         *                  +----------------+  +-----------------+  +-----------------+
+         *                    (inner1)             (inner2)             (inner3)
+         *
+         * Intermediate tree after removal of keys 27, 33 & 36:
+         *
+         *                         (root)
+         *                 +-----------------------+
+         *                 | * | (15, *) | (39, *) |  <-- Pivot key to `inner2` updated after borrow
+         *                 +-----------------------+
+         *                /           |             \
+         *              /             |              \
+         *         +---------+  +---------+  +-----------------+
+         *         |*|(9, *)|  |*|(21, *)|  |*|(45, *)|(51, *)|
+         *         +---------+  +---------+  +-----------------+
+         *         (inner1)      (inner2)         (inner3)
+         *
+         * Final tree after removal of keys 21 & 24:
+         *
+         *                         (root)
+         *                 +-------------+
+         *                 | * | (39, *) |  <-- Pivot key to `inner2` removed after merge
+         *                 +-------------+
+         *                 /            \
+         *                /              \
+         *         +----------------+  +-----------------+
+         *         |*|(9, *)|(15, *)|  |*|(45, *)|(51, *)|
+         *         +----------------+  +-----------------+
+         *
+         * After the inner nodes merge into one the pivot element in the parent node
+         * is removed. The merged inner node now has two elements.
+         */
+        // Verify preconditions
+        EXPECT_EQ(index.GetRoot()->GetType(), NodeType::InnerType);
+        auto root = static_cast<InnerNode *>(index.GetRoot());
+
+        auto pivot_inner2 = root->Begin();
+        auto pivot_inner1 = root->GetLowKeyPair();
+
+        EXPECT_EQ(root->GetCurrentSize(), 2);
+        EXPECT_EQ(pivot_inner2->first, 21);
+        EXPECT_EQ(pivot_inner2->second->GetType(), NodeType::InnerType);
+        EXPECT_EQ(pivot_inner1.second->GetType(), NodeType::InnerType);
+
+        auto inner2 = static_cast<InnerNode *>(pivot_inner2->second);
+        auto inner1 = static_cast<InnerNode *>(pivot_inner1.second);
+
+        EXPECT_EQ(inner2->GetCurrentSize(), 2);
+        EXPECT_EQ(inner1->GetCurrentSize(), 2);
+
+
+        // Trigger merge of `inner2` with `inner1` node
+        std::vector delete_keys{27, 33, 36, 21, 24};
+        for (auto &y: delete_keys) {
+            index.Delete(std::make_pair(y, y));
+
+            EXPECT_EQ(index.FindValueOfKey(y), std::nullopt);
+        }
+
+        // Verify post conditions
+        EXPECT_EQ(root->GetCurrentSize(), 1);
+        EXPECT_EQ(root->Begin()->first, 39);
+
+        auto merged_inner = static_cast<InnerNode *>(root->GetLowKeyPair().second);
+
+        /**
+         * The merged inner node is the same node as `inner1`
+         * verified through pointer equality.
+         */
+        EXPECT_EQ(merged_inner, inner1);
+        EXPECT_EQ(merged_inner->GetCurrentSize(), 2);
+
+        std::vector remaining_keys{3, 6, 9, 12, 15, 18, 30, 39, 42, 45, 48, 51, 52};
+        int i = 0;
+        for (auto iter = index.Begin(); iter != index.End(); ++iter) {
+            EXPECT_EQ((*iter).first, remaining_keys[i++]);
+        }
+    }
 }

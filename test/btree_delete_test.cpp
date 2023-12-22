@@ -404,4 +404,89 @@ namespace bplustree {
         }
     }
 
+    TEST(BPlusTreeDeleteTest, BorrowOneFromNextInnerNode) {
+        auto index = bplustree::BPlusTree(3, 3);
+
+        std::vector insert_keys{3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39, 42, 45, 48, 51, 52};
+        for (auto &x: insert_keys) {
+            index.Insert(std::make_pair(x, x));
+        }
+
+        /**
+         * Original B+Tree:
+         *                                          (root)
+         *                                  +-----------------------+
+         *                                  | * | (21, *) | (39, *) |
+         *                                  +-----------------------+
+         *                                 /           |             \
+         *                               /             |              \
+         *                  +----------------+  +-----------------+  +-----------------+
+         *                  |*|(9, *)|(15, *)|  |*|(27, *)|(33, *)|  |*|(45, *)|(51, *)|
+         *                  +----------------+  +-----------------+  +-----------------+
+         *                    (inner1)             (inner2)             (inner3)
+         *
+         * The inner node max size is specified as 3 for this index. This means it can
+         * hold at most 3 keys, and 4 node pointers. The inner node should contain at
+         * a minimum of 1 key to prevent underflow.
+         *
+         * In the above tree if the pivot elements `(9, *)` and `(15, *)` are removed from
+         * `inner1` then the node will underflow and it will attempt to borrow one
+         * pivot element from its next sibling `inner2`.
+         *
+         * The `*` in `(9, *)` represents the node pointer to the leaf node in the next
+         * level of the tree which is not shown here for lack of space.
+         *
+         * After deletes and borrow one:
+         *
+         *                         (root)
+         *                 +-----------------------+
+         *                 | * | (27, *) | (39, *) | <-- Pivot key to `inner2` updated
+         *                 +-----------------------+
+         *                /           |             \
+         *              /             |              \
+         *         +---------+  +---------+  +-----------------+
+         *         |*|(21, *)|  |*|(33, *)|  |*|(45, *)|(51, *)|
+         *         +---------+  +---------+  +-----------------+
+         *         (inner1)      (inner2)         (inner3)
+         *
+         * The `inner1` node borrowed on element from `inner2` after underflow.
+         * The pivot key for `inner2` is updated in the parent node so that
+         * search can continue to work correctly after the borrow.
+         * The `inner2` has one less element than earlier and did not underflow
+         * after the borrow.
+         */
+
+        // Verify preconditions
+        EXPECT_EQ(index.GetRoot()->GetType(), NodeType::InnerType);
+        auto root = static_cast<InnerNode *>(index.GetRoot());
+
+        auto pivot_inner2 = root->Begin();
+        auto pivot_inner1 = root->GetLowKeyPair();
+
+        EXPECT_EQ(root->GetCurrentSize(), 2);
+        EXPECT_EQ(pivot_inner2->first, 21);
+        EXPECT_EQ(pivot_inner2->second->GetType(), NodeType::InnerType);
+        EXPECT_EQ(pivot_inner1.second->GetType(), NodeType::InnerType);
+
+        auto inner2 = static_cast<InnerNode *>(pivot_inner2->second);
+        auto inner1 = static_cast<InnerNode *>(pivot_inner1.second);
+
+        EXPECT_EQ(inner2->GetCurrentSize(), 2);
+        EXPECT_EQ(inner1->GetCurrentSize(), 2);
+
+        // Trigger borrow one element from `inner2` to `inner1` node
+        std::vector delete_keys{9, 12, 15};
+        for (auto &y: delete_keys) {
+            index.Delete(std::make_pair(y, y));
+
+            EXPECT_EQ(index.FindValueOfKey(y), std::nullopt);
+        }
+
+        // Verify post conditions
+        EXPECT_EQ(root->GetCurrentSize(), 2);
+        EXPECT_EQ(pivot_inner2->first, 27);
+        EXPECT_EQ(inner2->GetCurrentSize(), 1);
+        EXPECT_EQ(inner1->GetCurrentSize(), 1);
+    }
+
 }

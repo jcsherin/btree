@@ -3,6 +3,30 @@
 #include "../src/bplustree.h"
 
 namespace bplustree {
+    TEST(BPlusTreeInsertTest, InsertAndFetchEveryKey) {
+        BPlusTree index{3, 4};
+
+        std::vector<int> items(128);
+        std::iota(items.begin(), items.end(), 0);
+
+        for (auto &i: items) {
+            index.Insert(std::make_pair(i, i));
+
+            EXPECT_EQ(index.FindValueOfKey(i), i);
+        }
+        EXPECT_NE(index.GetRoot(), nullptr);
+
+        int i = 0;
+        for (auto iter = index.Begin(); iter != index.End(); ++iter) {
+            EXPECT_EQ((*iter).first, items[i++]);
+        }
+
+        int j = items.size() - 1;
+        for (auto iter = index.RBegin(); iter != index.REnd(); --iter) {
+            EXPECT_EQ((*iter).first, items[j--]);
+        }
+    }
+
     TEST(BPlusTreeInsertTest, IsEmptyInitially) {
         BPlusTree index{4, 5};
         EXPECT_EQ(index.GetRoot(), nullptr);

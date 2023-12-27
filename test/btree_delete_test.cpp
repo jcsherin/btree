@@ -18,14 +18,16 @@ namespace bplustree {
     TEST(BPlusTreeDeleteTest, DeleteEveryKey) {
         BPlusTree index{3, 4};
 
-        for (int i = 0; i < 4; ++i) {
+        int count = 128;
+
+        for (int i = 0; i < count; ++i) {
             index.Insert(std::make_pair(i, i));
 
             EXPECT_EQ(index.FindValueOfKey(i), i);
         }
         EXPECT_NE(index.GetRoot(), nullptr);
 
-        for (int i = 0; i < 4; ++i) {
+        for (int i = 0; i < count; ++i) {
             auto deleted = index.Delete(std::make_pair(i, i));
 
             EXPECT_TRUE(deleted);

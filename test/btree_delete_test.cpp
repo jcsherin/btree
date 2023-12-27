@@ -40,7 +40,7 @@ namespace bplustree {
     TEST(BPlusTreeDeleteTest, DeleteEveryKeyInRandomOrder) {
         BPlusTree index{3, 4};
 
-        std::vector<int> items(128);
+        std::vector<int> items(512);
         std::iota(items.begin(), items.end(), 0);
 
         for (auto &i: items) {

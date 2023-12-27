@@ -3,23 +3,6 @@
 #include "../src/bplustree.h"
 
 namespace bplustree {
-    TEST(BPlusTreeDeleteTest, DeleteAnExistingKey) {
-        BPlusTree index{3, 4};
-
-        for (int i = 0; i < 4; ++i) {
-            index.Insert(std::make_pair(i, i));
-
-            EXPECT_EQ(index.FindValueOfKey(i), i);
-        }
-
-        for (int i = 0; i < 4; ++i) {
-            auto deleted = index.Delete(std::make_pair(i, i));
-
-            EXPECT_TRUE(deleted);
-            EXPECT_EQ(index.FindValueOfKey(i), std::nullopt);
-        }
-    }
-
     TEST(BPlusTreeDeleteTest, DeleteNonExistentKey) {
         BPlusTree index{3, 4};
 
@@ -32,11 +15,13 @@ namespace bplustree {
         EXPECT_FALSE(index.Delete(std::make_pair(4, 4)));
     }
 
-    TEST(BPlusTreeDeleteTest, DeleteAllKeys) {
+    TEST(BPlusTreeDeleteTest, DeleteEveryKey) {
         BPlusTree index{3, 4};
 
         for (int i = 0; i < 4; ++i) {
             index.Insert(std::make_pair(i, i));
+
+            EXPECT_EQ(index.FindValueOfKey(i), i);
         }
         EXPECT_NE(index.GetRoot(), nullptr);
 

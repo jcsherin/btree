@@ -776,4 +776,53 @@ namespace bplustree {
             EXPECT_EQ((*iter).first, remaining_keys[i++]);
         }
     }
+
+    TEST(BPlusTreeDeleteTest, ReplaceRootNode) {
+        auto index = bplustree::BPlusTree(3, 3);
+
+        std::vector insert_keys{3, 6, 9, 12};
+        for (auto &x: insert_keys) {
+            index.Insert(std::make_pair(x, x));
+        }
+
+        /**
+         *
+         *          +-----------+
+         *          | * | 9 | * |
+         *          +-----------+
+         *          /         \
+         *         /           \
+         *      +-------+   +--------+
+         *      | 3 | 6 |   | 9 | 12 |
+         *      +-------+   +--------+
+         */
+
+        // Preconditions
+        EXPECT_EQ(index.GetRoot()->GetType(), NodeType::InnerType);
+        auto root = static_cast<InnerNode *>(index.GetRoot());
+
+        EXPECT_EQ(root->GetCurrentSize(), 1);
+        EXPECT_EQ(root->Begin()->first, 9);
+
+        // Collapse a level
+        index.Delete(std::make_pair(9, 9));
+        EXPECT_EQ(index.FindValueOfKey(9), std::nullopt);
+
+        /**
+         *      +------------+
+         *      | 3 | 6 | 12 | <-- New root
+         *      +------------+
+         */
+
+        // Post-conditions
+        EXPECT_EQ(index.GetRoot()->GetType(), NodeType::LeafType);
+        auto new_root = static_cast<LeafNode *>(index.GetRoot());
+
+        EXPECT_EQ(new_root->GetCurrentSize(), 3);
+        std::vector remaining_keys{3, 6, 12};
+        int i = 0;
+        for (auto iter = index.Begin(); iter != index.End(); ++iter) {
+            EXPECT_EQ((*iter).first, remaining_keys[i++]);
+        }
+    }
 }

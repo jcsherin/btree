@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <numeric>
+#include <random>
 #include "../src/bplustree.h"
 
 namespace bplustree {
@@ -33,6 +34,33 @@ namespace bplustree {
             EXPECT_TRUE(deleted);
             EXPECT_EQ(index.FindValueOfKey(i), std::nullopt);
         }
+        EXPECT_EQ(index.GetRoot(), nullptr);
+    }
+
+    TEST(BPlusTreeDeleteTest, DeleteEveryKeyInRandomOrder) {
+        BPlusTree index{3, 4};
+
+        std::vector<int> items(128);
+        std::iota(items.begin(), items.end(), 0);
+
+        for (auto &i: items) {
+            index.Insert(std::make_pair(i, i));
+
+            EXPECT_EQ(index.FindValueOfKey(i), i);
+        }
+        EXPECT_NE(index.GetRoot(), nullptr);
+
+        std::random_device rd;
+        std::mt19937 g(rd());
+
+        std::shuffle(items.begin(), items.end(), g);
+        for (auto &i: items) {
+            auto deleted = index.Delete(std::make_pair(i, i));
+
+            EXPECT_TRUE(deleted);
+            EXPECT_EQ(index.FindValueOfKey(i), std::nullopt);
+        }
+
         EXPECT_EQ(index.GetRoot(), nullptr);
     }
 

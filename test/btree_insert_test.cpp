@@ -7,7 +7,7 @@ namespace bplustree {
     TEST(BPlusTreeInsertTest, InsertAndFetchEveryKey) {
         BPlusTree index{3, 4};
 
-        std::vector<int> items(128);
+        std::vector<int> items(10000);
         std::iota(items.begin(), items.end(), 0);
 
         for (auto &i: items) {

@@ -798,6 +798,34 @@ namespace bplustree {
                 } else {
                     // Recursively split the node
                     auto split_inner_node = inner_node->SplitNode();
+
+                    /**
+                     * A bug narrative:
+                     * When the fanout is 4, the number of keys is 3. After
+                     * splitting the node it will have only a single element,
+                     * meaning a single node pointer. This is not enough as
+                     * the minimum necessary occupancy is at least 2 node
+                     * pointers with a single key.
+                     *
+                     * We can borrow a node pointer from the original node
+                     * after the split. The key of the borrowed element will
+                     * become the pivot/transition key in the parent inner
+                     * node to the newly split node.
+                     *
+                     * The incorrect implementation did not borrow a node
+                     * pointer from the original node but used the first
+                     * element in the split node. This results in an
+                     * underflow when the node size is 3(= fanout 4).
+                     *
+                     * The below code sets the low key pair by borrowing
+                     * the node pointer from the original node before
+                     * attempting to reinsert the element which caused
+                     * the split in the first place.
+                     */
+                     split_inner_node->GetLowKeyPair().first = inner_node->RBegin()->first;
+                     split_inner_node->GetLowKeyPair().second = inner_node->RBegin()->second;
+                     inner_node->PopEnd();
+
                     if (inner_node_element.first >= split_inner_node->Begin()->first) {
                         split_inner_node->InsertElementIfPossible(inner_node_element,
                                                                   static_cast<InnerNode *>(split_inner_node)->FindLocation(
@@ -807,9 +835,6 @@ namespace bplustree {
                                                             static_cast<InnerNode *>(inner_node)->FindLocation(
                                                                     inner_node_element.first));
                     }
-                    split_inner_node->GetLowKeyPair().first = split_inner_node->Begin()->first;
-                    split_inner_node->GetLowKeyPair().second = split_inner_node->Begin()->second;
-                    split_inner_node->PopBegin();
 
                     inner_node_element = std::make_pair(split_inner_node->GetLowKeyPair().first, split_inner_node);
                 }

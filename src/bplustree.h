@@ -826,7 +826,7 @@ namespace bplustree {
                      split_inner_node->GetLowKeyPair().second = inner_node->RBegin()->second;
                      inner_node->PopEnd();
 
-                    if (inner_node_element.first >= split_inner_node->Begin()->first) {
+                    if (inner_node_element.first >= split_inner_node->GetLowKeyPair().first) {
                         split_inner_node->InsertElementIfPossible(inner_node_element,
                                                                   static_cast<InnerNode *>(split_inner_node)->FindLocation(
                                                                           inner_node_element.first));

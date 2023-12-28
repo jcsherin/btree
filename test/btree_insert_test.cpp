@@ -58,7 +58,7 @@ namespace bplustree {
     }
 
 
-    TEST(BPlusTreeInsertTest, IsEmptyInitially) {
+    TEST(BPlusTreeInsertTest, AnEmptyTree) {
         BPlusTree index{4, 5};
         EXPECT_EQ(index.GetRoot(), nullptr);
     }

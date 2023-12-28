@@ -18,12 +18,12 @@ namespace bplustree {
 
         int i = 0;
         for (auto iter = index.Begin(); iter != index.End(); ++iter) {
-            EXPECT_EQ((*iter).first, items[i++]);
+            EXPECT_EQ((*iter).first, i++);
         }
 
         int j = items.size() - 1;
         for (auto iter = index.RBegin(); iter != index.REnd(); --iter) {
-            EXPECT_EQ((*iter).first, items[j--]);
+            EXPECT_EQ((*iter).first, j--);
         }
     }
 

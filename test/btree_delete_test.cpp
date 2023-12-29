@@ -485,6 +485,22 @@ namespace bplustree {
         // Trigger borrow from next inner node
         index.Delete(std::make_pair(9, 9));
 
+        /**
+         * B+Tree after borrowing from next inner node:
+         *
+         *                   +--------------+
+         *                   | * | (21, * ) |
+         *                   +--------------+
+         *                    /           \
+         *        +------------+         +--------------+
+         *        | * | (15, *) |         | * | (33, *) |
+         *        +------------+         +--------------+
+         *         /          \             |         \
+         *      +------+     +-----+     +-----+     +--------+
+         *      |3|6|12|<--->|15|18|<--->|21|27|<--->|33|39|45|
+         *      +------+     +-----+     +-----+     +--------+
+         */
+
         // Verify post conditions
         EXPECT_EQ(root->GetCurrentSize(), 1);
         EXPECT_EQ(root->GetLowKeyPair().second->GetType(), NodeType::InnerType);

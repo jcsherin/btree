@@ -850,9 +850,9 @@ namespace bplustree {
                      * attempting to reinsert the element which caused
                      * the split in the first place.
                      */
-                     split_inner_node->GetLowKeyPair().first = inner_node->RBegin()->first;
-                     split_inner_node->GetLowKeyPair().second = inner_node->RBegin()->second;
-                     inner_node->PopEnd();
+                    split_inner_node->GetLowKeyPair().first = inner_node->RBegin()->first;
+                    split_inner_node->GetLowKeyPair().second = inner_node->RBegin()->second;
+                    inner_node->PopEnd();
 
                     if (inner_node_element.first >= split_inner_node->GetLowKeyPair().first) {
                         split_inner_node->InsertElementIfPossible(inner_node_element,

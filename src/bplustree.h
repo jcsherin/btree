@@ -770,6 +770,34 @@ namespace bplustree {
                         element,
                         static_cast<LeafNode *>(node)->FindLocation(element.first)
                 );
+
+                /**
+                 * Fix underflow in split node
+                 * ---------------------------
+                 *
+                 * When the maximum elements allowed in the leaf is of size 3, the
+                 * underflow happens when a leaf node does not have at least 2
+                 * elements in it. But at size 3, the original node retains 2
+                 * elements and the split node will have only a single element.
+                 * This split under flows as soon as it was created.
+                 *
+                 * If the insertion does not happen in the split node then the
+                 * leaf node must not underflow invariant will be broken after
+                 * insertion.
+                 *
+                 * We can borrow the last element in the original node after
+                 * the new element is inserted in to the correct order in it.
+                 * So now both leaf nodes will have exactly 2 elements after
+                 * insertion and the minimum size invariants will hold.
+                 */
+
+                if (split_node->GetCurrentSize() < static_cast<LeafNode *>(split_node)->GetMinSize()) {
+                    split_node->InsertElementIfPossible(
+                            (*node->RBegin()),
+                            static_cast<LeafNode *>(split_node)->FindLocation(node->RBegin()->first)
+                    );
+                    node->PopEnd();
+                }
             }
 
             if (node->GetSiblingRight() != nullptr) {

@@ -422,91 +422,97 @@ namespace bplustree {
     TEST(BPlusTreeDeleteTest, BorrowOneFromNextInnerNode) {
         auto index = bplustree::BPlusTree(3, 3);
 
-        std::vector insert_keys{3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39, 42, 45, 48, 51, 52};
+        std::vector insert_keys{3, 6, 9, 12, 15, 18, 21, 27, 33, 39, 45};
         for (auto &x: insert_keys) {
             index.Insert(std::make_pair(x, x));
         }
 
         /**
-         * Original B+Tree:
-         *                                          (root)
-         *                                  +-----------------------+
-         *                                  | * | (21, *) | (39, *) |
-         *                                  +-----------------------+
-         *                                 /           |             \
-         *                               /             |              \
-         *                  +----------------+  +-----------------+  +-----------------+
-         *                  |*|(9, *)|(15, *)|  |*|(27, *)|(33, *)|  |*|(45, *)|(51, *)|
-         *                  +----------------+  +-----------------+  +-----------------+
-         *                    (inner1)             (inner2)             (inner3)
+         * B+Tree after insertions:
          *
-         * The inner node max size is specified as 3 for this index. This means it can
-         * hold at most 3 keys, and 4 node pointers. The inner node should contain at
-         * a minimum of 1 key to prevent underflow.
+         *                   +--------------+
+         *                   | * | (15, * ) |                              <-- Root
+         *                   +--------------+
+         *                    /          \
+         *        +------------+         +-----------------------+
+         *        | * | (9, *) |         | * | (21, *) | (33, *) |         <-- Inner  Nodes
+         *        +------------+         +-----------------------+
+         *         /        \            /          |         \
+         *      +---+     +----+     +-----+     +-----+     +--------+
+         *      |3|6|<--->|9|12|<--->|15|18|<--->|21|27|<--->|33|39|45|    <-- Leaf Nodes
+         *      +---+     +----+     +-----+     +-----+     +--------+
          *
-         * In the above tree if the pivot elements `(9, *)` and `(15, *)` are removed from
-         * `inner1` then the node will underflow and it will attempt to borrow one
-         * pivot element from its next sibling `inner2`.
+         *                   +----------------------+
+         *                   | Keys | Fanout |  Min |
+         *      +------------+----------------------+
+         *      | Inner Node |   3  |     4  |    1 |
+         *      +-----------------------------------+
+         *      | Leaf Node  |   3  |  n/a   |   2  |
+         *      +-----------------------------------+
          *
-         * The `*` in `(9, *)` represents the node pointer to the leaf node in the next
-         * level of the tree which is not shown here for lack of space.
+         * Deleting the element with key `9` will cause the first inner node to
+         * underflow when the pivot element `(9, *)` is removed. The `*` here
+         * represents a node pointer. The inner node should contain a minimum
+         * of 1 key and 2 node pointers. So it will borrow one element from
+         * the next inner node to fix underflow.
          *
-         * After deletes and borrow one:
-         *
-         *                         (root)
-         *                 +-----------------------+
-         *                 | * | (27, *) | (39, *) | <-- Pivot key to `inner2` updated
-         *                 +-----------------------+
-         *                /           |             \
-         *              /             |              \
-         *         +---------+  +---------+  +-----------------+
-         *         |*|(21, *)|  |*|(33, *)|  |*|(45, *)|(51, *)|
-         *         +---------+  +---------+  +-----------------+
-         *         (inner1)      (inner2)         (inner3)
-         *
-         * The `inner1` node borrowed on element from `inner2` after underflow.
-         * The pivot key for `inner2` is updated in the parent node so that
-         * search can continue to work correctly after the borrow.
-         * The `inner2` has one less element than earlier and did not underflow
-         * after the borrow.
+         * The pivot element between these two inner nodes will also need to
+         * be updated for search/traversal to continue to work correctly
+         * by updating the key.
          */
 
         // Verify preconditions
         EXPECT_EQ(index.GetRoot()->GetType(), NodeType::InnerType);
         auto root = static_cast<InnerNode *>(index.GetRoot());
 
-        auto pivot_inner2 = root->Begin();
-        auto pivot_inner1 = root->GetLowKeyPair();
+        EXPECT_EQ(root->GetCurrentSize(), 1);
+        EXPECT_EQ(root->GetLowKeyPair().second->GetType(), NodeType::InnerType);
+        EXPECT_EQ(root->Begin()->second->GetType(), NodeType::InnerType);
 
-        EXPECT_EQ(root->GetCurrentSize(), 2);
-        EXPECT_EQ(pivot_inner2->first, 21);
-        EXPECT_EQ(pivot_inner2->second->GetType(), NodeType::InnerType);
-        EXPECT_EQ(pivot_inner1.second->GetType(), NodeType::InnerType);
+        auto pivot = root->Begin();
+        EXPECT_EQ(pivot->first, 15);
 
-        auto inner2 = static_cast<InnerNode *>(pivot_inner2->second);
-        auto inner1 = static_cast<InnerNode *>(pivot_inner1.second);
+        auto inner = static_cast<InnerNode *>(root->GetLowKeyPair().second);
+        EXPECT_EQ(inner->GetCurrentSize(), 1);
+        EXPECT_EQ(inner->Begin()->first, 9);
+        EXPECT_EQ(inner->Begin()->second->GetType(), NodeType::LeafType);
 
-        EXPECT_EQ(inner2->GetCurrentSize(), 2);
-        EXPECT_EQ(inner1->GetCurrentSize(), 2);
+        auto next_inner = static_cast<InnerNode *>(pivot->second);
+        EXPECT_EQ(next_inner->GetCurrentSize(), 2);
+        EXPECT_EQ(next_inner->Begin()->first, 21);
+        EXPECT_EQ(next_inner->Begin()->second->GetType(), NodeType::LeafType);
 
-        // Trigger borrow one element from `inner2` to `inner1` node
-        std::vector delete_keys{9, 12, 15};
-        for (auto &y: delete_keys) {
-            index.Delete(std::make_pair(y, y));
-
-            EXPECT_EQ(index.FindValueOfKey(y), std::nullopt);
-        }
+        // Trigger borrow from next inner node
+        index.Delete(std::make_pair(9, 9));
 
         // Verify post conditions
-        EXPECT_EQ(root->GetCurrentSize(), 2);
-        EXPECT_EQ(pivot_inner2->first, 27);
-        EXPECT_EQ(inner2->GetCurrentSize(), 1);
-        EXPECT_EQ(inner1->GetCurrentSize(), 1);
+        EXPECT_EQ(root->GetCurrentSize(), 1);
+        EXPECT_EQ(root->GetLowKeyPair().second->GetType(), NodeType::InnerType);
+        EXPECT_EQ(root->Begin()->second->GetType(), NodeType::InnerType);
 
-        std::vector remaining_keys{3, 6, 18, 21, 24, 27, 30, 33, 36, 39, 42, 45, 48, 51, 52};
+        EXPECT_EQ(pivot->first, 21);
+
+        EXPECT_EQ(inner->GetCurrentSize(), 1);
+        EXPECT_EQ(inner->Begin()->first, 15);
+        EXPECT_EQ(inner->Begin()->second->GetType(), NodeType::LeafType);
+
+        EXPECT_EQ(next_inner->GetCurrentSize(), 1);
+        EXPECT_EQ(next_inner->Begin()->first, 33);
+        EXPECT_EQ(next_inner->Begin()->second->GetType(), NodeType::LeafType);
+
+
+        std::vector remaining_keys{3, 6, 12, 15, 18, 21, 27, 33, 39, 45};
+
+        // Verify forward iteration
         int i = 0;
         for (auto iter = index.Begin(); iter != index.End(); ++iter) {
             EXPECT_EQ((*iter).first, remaining_keys[i++]);
+        }
+
+        // Verify backward iteration
+        int j = remaining_keys.size() - 1;
+        for (auto iter = index.RBegin(); iter != index.REnd(); --iter) {
+            EXPECT_EQ((*iter).first, remaining_keys[j--]);
         }
     }
 

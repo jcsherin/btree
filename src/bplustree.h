@@ -886,8 +886,7 @@ namespace bplustree {
             return true;
         }
 
-        // TODO: Change parameter to key after making B+Tree generic
-        bool Delete(const KeyValuePair &element) {
+        bool Delete(const int keyToRemove) {
             if (root_ == nullptr) { return false; }
 
             // Find the leaf node that contains key-value element
@@ -899,13 +898,13 @@ namespace bplustree {
 
                 stack.push_back(node);
 
-                current = static_cast<InnerNode *>(node)->FindPivot(element.first)->second;
+                current = static_cast<InnerNode *>(node)->FindPivot(keyToRemove)->second;
             }
 
             auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current);
-            auto iter = static_cast<LeafNode *>(node)->FindLocation(element.first);
+            auto iter = static_cast<LeafNode *>(node)->FindLocation(keyToRemove);
 
-            if (iter == node->End() || iter->first != element.first) {
+            if (iter == node->End() || iter->first != keyToRemove) {
                 return false; // key was not found in the tree
             }
 
@@ -948,7 +947,7 @@ namespace bplustree {
                  * of th neighbour leaf nodes.
                  */
 
-                auto maybe_previous = static_cast<InnerNode *>(parent)->MaybePreviousWithSeparator(element.first);
+                auto maybe_previous = static_cast<InnerNode *>(parent)->MaybePreviousWithSeparator(keyToRemove);
                 if (maybe_previous.has_value()) {
                     auto other = reinterpret_cast<ElasticNode<KeyValuePair> *>((*maybe_previous).first);
                     auto pivot = (*maybe_previous).second;
@@ -978,7 +977,7 @@ namespace bplustree {
                         node->FreeElasticNode();
                     }
                 } else {
-                    auto maybe_next = static_cast<InnerNode *>(parent)->MaybeNextWithSeparator(element.first);
+                    auto maybe_next = static_cast<InnerNode *>(parent)->MaybeNextWithSeparator(keyToRemove);
                     if (maybe_next.has_value()) {
                         auto other = reinterpret_cast<ElasticNode<KeyValuePair> *>((*maybe_next).first);
                         auto pivot = (*maybe_next).second;
@@ -1023,7 +1022,7 @@ namespace bplustree {
                 auto parent = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(*stack.rbegin());
                 stack.pop_back();
 
-                auto maybe_previous = static_cast<InnerNode *>(parent)->MaybePreviousWithSeparator(element.first);
+                auto maybe_previous = static_cast<InnerNode *>(parent)->MaybePreviousWithSeparator(keyToRemove);
                 if (maybe_previous.has_value()) {
                     auto other = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>((*maybe_previous).first);
                     auto pivot = (*maybe_previous).second;
@@ -1078,7 +1077,7 @@ namespace bplustree {
                         inner_node->FreeElasticNode();
                     }
                 } else {
-                    auto maybe_next = static_cast<InnerNode *>(parent)->MaybeNextWithSeparator(element.first);
+                    auto maybe_next = static_cast<InnerNode *>(parent)->MaybeNextWithSeparator(keyToRemove);
                     if (maybe_next.has_value()) {
                         auto other = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>((*maybe_next).first);
                         auto pivot = (*maybe_next).second;

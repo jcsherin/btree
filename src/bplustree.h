@@ -715,6 +715,44 @@ namespace bplustree {
             }
         }
 
+        /*
+         * Concurrency:
+         *
+         * In the first attempt we descend the B+Tree from the root to the
+         * leaf node assuming that this insertion will not overflow the leaf
+         * node. So an exclusive lock is only acquired on the leaf node where
+         * the key-value element is written. For all parent nodes on that path
+         * to the leaf node we acquire only shared locks. In latch crabbing
+         * the shared latch on the parent node is released once we have
+         * acquired a shared/exclusive latch on the current node.
+         *
+         * The root node is protected by a second latch in the B+Tree. This
+         * is necessary as the root of the B+Tree itself could change while
+         * the insert is in progress. We always acquire an exclusive latch
+         * for the root node to prevent concurrent modifications to the
+         * root of the B+Tree.
+         *
+         * Deadlocks are avoided by always acquiring the latches only in
+         * a single direction - from the root the leaf nodes of the B+Tree.
+         *
+         * When the leaf node will overflow, the optimistic approach has
+         * to be abandoned. The traversal process is restarted. This time
+         * exclusive latches have to be acquired all the way from the
+         * root down to the leaf node.
+         *
+         * Holding exclusive latches all the way from the root to the leaf
+         * node can significantly impact concurrency. To improve upon this
+         * we check if there is a chance the current Inner node will not
+         * overflow if one more element is inserted. If the Inner node will
+         * not overflow it is considered safe. For a safe Inner node we
+         * release all the parent locks. This way we hold only just enough
+         * exclusive latches to ensure write happens correctly.
+         *
+         * It is likely that sometimes an insert will propagate all the
+         * way to the root node, changing the root of the B+Tree itself.
+         * This extreme case is likely to happen less often. Most often
+         * the inserts will happen in the optimistic path.
+         */
         bool InsertOptimistic(const KeyValuePair element) {
             if (root_ == nullptr) {
                 // Create an empty leaf node, which is also the root

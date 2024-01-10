@@ -7,6 +7,7 @@
 #include <queue>
 #include <optional>
 #include "macros.h"
+#include "shared_latch.h"
 
 namespace bplustree {
     enum class NodeType : int {
@@ -38,9 +39,20 @@ namespace bplustree {
 
         int GetMaxSize() { return max_size_; }
 
+        void GetNodeExclusiveLatch() { node_latch_.LockExclusive(); }
+
+        void GetNodeSharedLatch() { node_latch_.LockShared(); }
+
+        void ReleaseNodeExclusiveLatch() { node_latch_.UnlockExclusive(); }
+
+        void ReleaseNodeSharedLatch() { node_latch_.UnlockShared(); }
+
+        bool TrySharedLock() { return node_latch_.TryLockShared(); }
+
     private:
         NodeType type_;
         int max_size_;
+        SharedLatch node_latch_;
     };
 
     using KeyNodePointerPair = std::pair<int, BaseNode *>;

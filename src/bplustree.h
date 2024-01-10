@@ -1350,6 +1350,7 @@ namespace bplustree {
 
     private:
         BaseNode *root_;
+        SharedLatch root_latch_;
         int inner_node_max_size_;
         int leaf_node_max_size_;
     };

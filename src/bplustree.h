@@ -754,6 +754,8 @@ namespace bplustree {
          * the inserts will happen in the optimistic path.
          */
         bool InsertOptimistic(const KeyValuePair element) {
+            root_latch_.LockExclusive();
+
             if (root_ == nullptr) {
                 // Create an empty leaf node, which is also the root
                 KeyNodePointerPair dummy_low_key = std::make_pair(element.first, nullptr);
@@ -761,16 +763,23 @@ namespace bplustree {
             }
 
             BaseNode *current_node = root_;
+            BaseNode *parent_node = nullptr;
 
-            // Used to maintain a stack of node pointers from root to leaf
-            std::vector<BaseNode *> node_search_path{};
+            current_node->GetNodeSharedLatch();
 
             // Search for leaf node traversing down the B+Tree
             while (current_node->GetType() != NodeType::LeafType) {
                 auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
-                node_search_path.push_back(current_node);
+
+                if (parent_node != nullptr) {
+                    parent_node->ReleaseNodeSharedLatch();
+                } else {
+                    root_latch_.UnlockExclusive();
+                }
 
                 auto iter = static_cast<InnerNode *>(node)->FindLocation(element.first);
+
+                parent_node = current_node;
                 if (iter == node->End()) {
                     current_node = std::prev(iter)->second;
                 } else if (element.first == iter->first) {
@@ -778,148 +787,32 @@ namespace bplustree {
                 } else { // element.first < iter->first
                     current_node = (iter != node->Begin()) ? std::prev(iter)->second : node->GetLowKeyPair().second;
                 }
+
+                current_node->GetNodeSharedLatch();
             }
 
-            // Reached the leaf node
-            auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+            current_node->ReleaseNodeSharedLatch();
+            current_node->GetNodeExclusiveLatch();
+            if (parent_node != nullptr) {
+                parent_node->ReleaseNodeSharedLatch();
+            } else {
+                root_latch_.UnlockExclusive();
+            }
 
-            // Find where to insert element in leaf node
+            bool finished = false;
+            auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
             auto iter = static_cast<LeafNode *>(node)->FindLocation(element.first);
 
-            // Does not insert if this is a duplicate key
-            if (iter != node->End() && element.first == iter->first) {
+            if (iter != node->End() && element.first == iter->first) { // Duplicate
+                node->ReleaseNodeExclusiveLatch();
                 return false;
             }
 
-            // Insert will finish if the leaf node has space
-            if (node->InsertElementIfPossible(element, iter)) {
-                return true;
-            }
-
-            // Split the leaf node and insert the element in one of
-            // the leaf nodes
-            auto split_node = node->SplitNode();
-            if (element.first >= split_node->Begin()->first) {
-                split_node->InsertElementIfPossible(
-                        element,
-                        static_cast<LeafNode *>(split_node)->FindLocation(element.first)
-                );
+            finished = node->InsertElementIfPossible(element, iter);
+            if (!finished) {
+                node->ReleaseNodeExclusiveLatch(); // optimistic approach failed
             } else {
-                node->InsertElementIfPossible(
-                        element,
-                        static_cast<LeafNode *>(node)->FindLocation(element.first)
-                );
-
-                /**
-                 * Fix underflow in split node
-                 * ---------------------------
-                 *
-                 * When the maximum elements allowed in the leaf is of size 3, the
-                 * underflow happens when a leaf node does not have at least 2
-                 * elements in it. But at size 3, the original node retains 2
-                 * elements and the split node will have only a single element.
-                 * This split under flows as soon as it was created.
-                 *
-                 * If the insertion does not happen in the split node then the
-                 * leaf node must not underflow invariant will be broken after
-                 * insertion.
-                 *
-                 * We can borrow the last element in the original node after
-                 * the new element is inserted in to the correct order in it.
-                 * So now both leaf nodes will have exactly 2 elements after
-                 * insertion and the minimum size invariants will hold.
-                 */
-
-                if (split_node->GetCurrentSize() < static_cast<LeafNode *>(split_node)->GetMinSize()) {
-                    split_node->InsertElementIfPossible(
-                            (*node->RBegin()),
-                            static_cast<LeafNode *>(split_node)->FindLocation(node->RBegin()->first)
-                    );
-                    node->PopEnd();
-                }
-            }
-
-            if (node->GetSiblingRight() != nullptr) {
-                auto current_right_sibling = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetSiblingRight());
-                current_right_sibling->SetSiblingLeft(split_node);
-            }
-            // Fix sibling pointers to maintain a bidirectional chain
-            // of leaf nodes
-            split_node->SetSiblingLeft(node);
-            split_node->SetSiblingRight(node->GetSiblingRight());
-            node->SetSiblingRight(split_node);
-
-            bool insertion_finished = false;
-
-            KeyNodePointerPair inner_node_element = std::make_pair(split_node->Begin()->first, split_node);
-            while (!insertion_finished && !node_search_path.empty()) {
-                auto inner_node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(*node_search_path.rbegin());
-                node_search_path.pop_back();
-
-                if (inner_node->InsertElementIfPossible(
-                        inner_node_element,
-                        static_cast<InnerNode *>(inner_node)->FindLocation(inner_node_element.first)
-                )) {
-                    // we are done if insertion is possible without further splitting
-                    insertion_finished = true;
-                } else {
-                    // Recursively split the node
-                    auto split_inner_node = inner_node->SplitNode();
-
-                    /**
-                     * A bug narrative:
-                     * When the fanout is 4, the number of keys is 3. After
-                     * splitting the node it will have only a single element,
-                     * meaning a single node pointer. This is not enough as
-                     * the minimum necessary occupancy is at least 2 node
-                     * pointers with a single key.
-                     *
-                     * We can borrow a node pointer from the original node
-                     * after the split. The key of the borrowed element will
-                     * become the pivot/transition key in the parent inner
-                     * node to the newly split node.
-                     *
-                     * The incorrect implementation did not borrow a node
-                     * pointer from the original node but used the first
-                     * element in the split node. This results in an
-                     * underflow when the node size is 3(= fanout 4).
-                     *
-                     * The below code sets the low key pair by borrowing
-                     * the node pointer from the original node before
-                     * attempting to reinsert the element which caused
-                     * the split in the first place.
-                     */
-                    split_inner_node->GetLowKeyPair().first = inner_node->RBegin()->first;
-                    split_inner_node->GetLowKeyPair().second = inner_node->RBegin()->second;
-                    inner_node->PopEnd();
-
-                    if (inner_node_element.first >= split_inner_node->GetLowKeyPair().first) {
-                        split_inner_node->InsertElementIfPossible(inner_node_element,
-                                                                  static_cast<InnerNode *>(split_inner_node)->FindLocation(
-                                                                          inner_node_element.first));
-                    } else {
-                        inner_node->InsertElementIfPossible(inner_node_element,
-                                                            static_cast<InnerNode *>(inner_node)->FindLocation(
-                                                                    inner_node_element.first));
-                    }
-
-                    inner_node_element = std::make_pair(split_inner_node->GetLowKeyPair().first, split_inner_node);
-                }
-            }
-
-            // If insertion has not finished by now the split propagated
-            // back up to the root. So we now need to split the root node
-            // as well
-            if (!insertion_finished) {
-                auto old_root = root_;
-
-                KeyNodePointerPair low_key = std::make_pair(inner_node_element.first, old_root);
-                root_ = ElasticNode<KeyNodePointerPair>::Get(NodeType::InnerType, low_key, inner_node_max_size_);
-
-                auto new_root_node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(root_);
-                new_root_node->InsertElementIfPossible(inner_node_element,
-                                                       static_cast<InnerNode *>(new_root_node)->FindLocation(
-                                                               inner_node_element.first));
+                return true;
             }
 
             return true;

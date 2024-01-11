@@ -799,7 +799,7 @@ namespace bplustree {
                 root_latch_.UnlockExclusive();
             }
 
-            bool finished = false;
+            bool finished_insertion = false;
             auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
             auto iter = static_cast<LeafNode *>(node)->FindLocation(element.first);
 
@@ -808,8 +808,8 @@ namespace bplustree {
                 return false;
             }
 
-            finished = node->InsertElementIfPossible(element, iter);
-            if (!finished) {
+            finished_insertion = node->InsertElementIfPossible(element, iter);
+            if (!finished_insertion) {
                 node->ReleaseNodeExclusiveLatch(); // optimistic approach failed
             } else {
                 return true;

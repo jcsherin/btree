@@ -803,7 +803,7 @@ namespace bplustree {
             auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
             auto iter = static_cast<LeafNode *>(node)->FindLocation(element.first);
 
-            if (iter != node->End() && element.first == iter->first) { // Duplicate
+            if (iter != node->End() && element.first == iter->first) { // Duplicate insertion
                 node->ReleaseNodeExclusiveLatch();
                 return false;
             }

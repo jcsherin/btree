@@ -799,7 +799,6 @@ namespace bplustree {
                 root_latch_.UnlockExclusive();
             }
 
-            bool finished_insertion = false;
             auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
             auto iter = static_cast<LeafNode *>(node)->FindLocation(element.first);
 
@@ -808,14 +807,191 @@ namespace bplustree {
                 return false;
             }
 
-            finished_insertion = node->InsertElementIfPossible(element, iter);
-            if (!finished_insertion) {
-                node->ReleaseNodeExclusiveLatch(); // optimistic approach failed
-            } else {
+            if (node->InsertElementIfPossible(element, iter)) {
                 node->ReleaseNodeExclusiveLatch();
                 return true;
             }
-                return true;
+
+            node->ReleaseNodeExclusiveLatch();
+            /*
+             * Optimistic insertion failed, so now we acquire exclusive locks
+             * by restarting the traversal from the root of the B+Tree. If a
+             * node is safe, we release all the parent exclusive locks.
+             *
+             * This is the pessimistic insertion!
+             */
+            bool insertion_finished = false;
+
+            root_latch_.LockExclusive();
+            bool holds_root_latch = true;
+
+            current_node = root_;
+            current_node->GetNodeExclusiveLatch();
+
+            std::vector<BaseNode *> stack_traversed_nodes{};
+
+            while (current_node->GetType() != NodeType::LeafType) {
+                auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+                stack_traversed_nodes.push_back(current_node);
+
+                // Release all parent exclusive locks if this inner node is safe
+                if (node->GetCurrentSize() < node->GetMaxSize()) {
+                    while (!stack_traversed_nodes.empty()) {
+                        (*stack_traversed_nodes.rbegin())->ReleaseNodeExclusiveLatch();
+                        stack_traversed_nodes.pop_back();
+                    }
+
+                    if (holds_root_latch) {
+                        root_latch_.UnlockExclusive();
+                        holds_root_latch = false;
+                    }
+                }
+
+                auto iter = static_cast<InnerNode *>(node)->FindLocation(element.first);
+                if (iter == node->End()) {
+                    current_node = std::prev(iter)->second;
+                } else if (element.first == iter->first) {
+                    current_node = iter->second;
+                } else { // element.first < iter->first
+                    current_node = (iter != node->Begin()) ? std::prev(iter)->second : node->GetLowKeyPair().second;
+                }
+
+                current_node->GetNodeExclusiveLatch();
+            }
+
+            node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+            auto split_node = node->SplitNode();
+            if (element.first >= split_node->Begin()->first) {
+                split_node->InsertElementIfPossible(
+                        element,
+                        static_cast<LeafNode *>(split_node)->FindLocation(element.first)
+                );
+            } else {
+                node->InsertElementIfPossible(
+                        element,
+                        static_cast<LeafNode *>(node)->FindLocation(element.first)
+                );
+
+                /**
+                 * Fix underflow in split node
+                 * ---------------------------
+                 *
+                 * When the maximum elements allowed in the leaf is of size 3, the
+                 * underflow happens when a leaf node does not have at least 2
+                 * elements in it. But at size 3, the original node retains 2
+                 * elements and the split node will have only a single element.
+                 * This split under flows as soon as it was created.
+                 *
+                 * If the insertion does not happen in the split node then the
+                 * leaf node must not underflow invariant will be broken after
+                 * insertion.
+                 *
+                 * We can borrow the last element in the original node after
+                 * the new element is inserted in to the correct order in it.
+                 * So now both leaf nodes will have exactly 2 elements after
+                 * insertion and the minimum size invariants will hold.
+                 */
+
+                if (split_node->GetCurrentSize() < static_cast<LeafNode *>(split_node)->GetMinSize()) {
+                    split_node->InsertElementIfPossible(
+                            (*node->RBegin()),
+                            static_cast<LeafNode *>(split_node)->FindLocation(node->RBegin()->first)
+                    );
+                    node->PopEnd();
+                }
+            }
+
+            if (node->GetSiblingRight() != nullptr) {
+                auto sibling_right = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetSiblingRight());
+
+                sibling_right->GetNodeExclusiveLatch();
+                sibling_right->SetSiblingLeft(split_node);
+                sibling_right->ReleaseNodeExclusiveLatch();
+            }
+            // Fix sibling pointers to maintain a bidirectional chain
+            // of leaf nodes
+            split_node->SetSiblingLeft(node);
+            split_node->SetSiblingRight(node->GetSiblingRight());
+            node->SetSiblingRight(split_node);
+
+
+            KeyNodePointerPair inner_node_element = std::make_pair(split_node->Begin()->first, split_node);
+            while (!insertion_finished && !stack_traversed_nodes.empty()) {
+                auto inner_node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(*stack_traversed_nodes.rbegin());
+                stack_traversed_nodes.pop_back();
+
+                if (inner_node->InsertElementIfPossible(
+                        inner_node_element,
+                        static_cast<InnerNode *>(inner_node)->FindLocation(inner_node_element.first)
+                )) {
+                    // we are done if insertion is possible without further splitting
+                    insertion_finished = true;
+                } else {
+                    // Recursively split the node
+                    auto split_inner_node = inner_node->SplitNode();
+
+                    /**
+                     * A bug narrative:
+                     * When the fanout is 4, the number of keys is 3. After
+                     * splitting the node it will have only a single element,
+                     * meaning a single node pointer. This is not enough as
+                     * the minimum necessary occupancy is at least 2 node
+                     * pointers with a single key.
+                     *
+                     * We can borrow a node pointer from the original node
+                     * after the split. The key of the borrowed element will
+                     * become the pivot/transition key in the parent inner
+                     * node to the newly split node.
+                     *
+                     * The incorrect implementation did not borrow a node
+                     * pointer from the original node but used the first
+                     * element in the split node. This results in an
+                     * underflow when the node size is 3(= fanout 4).
+                     *
+                     * The below code sets the low key pair by borrowing
+                     * the node pointer from the original node before
+                     * attempting to reinsert the element which caused
+                     * the split in the first place.
+                     */
+                    split_inner_node->GetLowKeyPair().first = inner_node->RBegin()->first;
+                    split_inner_node->GetLowKeyPair().second = inner_node->RBegin()->second;
+                    inner_node->PopEnd();
+
+                    if (inner_node_element.first >= split_inner_node->GetLowKeyPair().first) {
+                        split_inner_node->InsertElementIfPossible(inner_node_element,
+                                                                  static_cast<InnerNode *>(split_inner_node)->FindLocation(
+                                                                          inner_node_element.first));
+                    } else {
+                        inner_node->InsertElementIfPossible(inner_node_element,
+                                                            static_cast<InnerNode *>(inner_node)->FindLocation(
+                                                                    inner_node_element.first));
+                    }
+
+                    inner_node_element = std::make_pair(split_inner_node->GetLowKeyPair().first, split_inner_node);
+                }
+
+                inner_node->ReleaseNodeExclusiveLatch();
+            }
+
+            // If insertion has not finished_insertion by now the split propagated
+            // back up to the root. So we now need to split the root node
+            // as well
+            if (!insertion_finished) {
+                BPLUSTREE_ASSERT(holds_root_latch, "Holds exclusive lock on root of the B+Tree");
+                auto old_root = root_;
+
+                KeyNodePointerPair low_key = std::make_pair(inner_node_element.first, old_root);
+                root_ = ElasticNode<KeyNodePointerPair>::Get(NodeType::InnerType, low_key, inner_node_max_size_);
+
+                auto new_root = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(root_);
+                new_root->InsertElementIfPossible(inner_node_element,
+                                                  static_cast<InnerNode *>(new_root)->FindLocation(
+                                                               inner_node_element.first));
+            }
+
+            if (holds_root_latch) {
+                root_latch_.UnlockExclusive();
+                holds_root_latch = false;
             }
 
             return true;

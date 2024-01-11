@@ -812,6 +812,9 @@ namespace bplustree {
             if (!finished_insertion) {
                 node->ReleaseNodeExclusiveLatch(); // optimistic approach failed
             } else {
+                node->ReleaseNodeExclusiveLatch();
+                return true;
+            }
                 return true;
             }
 

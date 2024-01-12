@@ -832,7 +832,6 @@ namespace bplustree {
 
             while (current_node->GetType() != NodeType::LeafType) {
                 auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
-                stack_traversed_nodes.push_back(current_node);
 
                 // Release all parent exclusive locks if this inner node is safe
                 if (node->GetCurrentSize() < node->GetMaxSize()) {
@@ -846,6 +845,8 @@ namespace bplustree {
                         holds_root_latch = false;
                     }
                 }
+
+                stack_traversed_nodes.push_back(current_node);
 
                 auto iter = static_cast<InnerNode *>(node)->FindLocation(element.first);
                 if (iter == node->End()) {
@@ -986,7 +987,7 @@ namespace bplustree {
                 auto new_root = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(root_);
                 new_root->InsertElementIfPossible(inner_node_element,
                                                   static_cast<InnerNode *>(new_root)->FindLocation(
-                                                               inner_node_element.first));
+                                                          inner_node_element.first));
             }
 
             if (holds_root_latch) {

@@ -8,7 +8,7 @@ namespace bplustree {
         BPlusTree index{3, 4};
 
         for (int i = 0; i < 4; ++i) {
-            index.Insert(std::make_pair(i, i));
+            index.InsertOptimistic(std::make_pair(i, i));
 
             EXPECT_EQ(index.FindValueOfKey(i), i);
         }
@@ -22,7 +22,7 @@ namespace bplustree {
         int count = 128;
 
         for (int i = 0; i < count; ++i) {
-            index.Insert(std::make_pair(i, i));
+            index.InsertOptimistic(std::make_pair(i, i));
 
             EXPECT_EQ(index.FindValueOfKey(i), i);
         }
@@ -44,7 +44,7 @@ namespace bplustree {
         std::iota(items.begin(), items.end(), 0);
 
         for (auto &i: items) {
-            index.Insert(std::make_pair(i, i));
+            index.InsertOptimistic(std::make_pair(i, i));
 
             EXPECT_EQ(index.FindValueOfKey(i), i);
         }
@@ -67,8 +67,8 @@ namespace bplustree {
     TEST(BPlusTreeDeleteTest, RootUnderflowAllowed) {
         BPlusTree index{3, 4};
 
-        index.Insert(std::make_pair(1, 1));
-        index.Insert(std::make_pair(2, 2));
+        index.InsertOptimistic(std::make_pair(1, 1));
+        index.InsertOptimistic(std::make_pair(2, 2));
 
         ASSERT_EQ(index.GetRoot()->GetType(), NodeType::LeafType);
 
@@ -88,7 +88,7 @@ namespace bplustree {
 
         std::vector keys{1, 2, 3, 4, 5};
         for (auto &x: keys) {
-            index.Insert(std::make_pair(x, x));
+            index.InsertOptimistic(std::make_pair(x, x));
         }
 
         ASSERT_EQ(index.GetRoot()->GetType(), NodeType::InnerType);
@@ -139,16 +139,16 @@ namespace bplustree {
     TEST(BPlusTreeDeleteTest, BorrowOneFromPreviousLeafNode) {
         auto index = bplustree::BPlusTree(3, 4);
 
-        index.Insert(std::make_pair(1, 1));
-        index.Insert(std::make_pair(3, 3));
-        index.Insert(std::make_pair(5, 5));
-        index.Insert(std::make_pair(7, 7));
-        index.Insert(std::make_pair(9, 9));
+        index.InsertOptimistic(std::make_pair(1, 1));
+        index.InsertOptimistic(std::make_pair(3, 3));
+        index.InsertOptimistic(std::make_pair(5, 5));
+        index.InsertOptimistic(std::make_pair(7, 7));
+        index.InsertOptimistic(std::make_pair(9, 9));
 
-        index.Insert(std::make_pair(8, 8));
-        index.Insert(std::make_pair(6, 6));
-        index.Insert(std::make_pair(4, 4));
-        index.Insert(std::make_pair(2, 2));
+        index.InsertOptimistic(std::make_pair(8, 8));
+        index.InsertOptimistic(std::make_pair(6, 6));
+        index.InsertOptimistic(std::make_pair(4, 4));
+        index.InsertOptimistic(std::make_pair(2, 2));
 
         /**
          *
@@ -216,16 +216,16 @@ namespace bplustree {
 
         auto index = bplustree::BPlusTree(3, 4);
 
-        index.Insert(std::make_pair(1, 1));
-        index.Insert(std::make_pair(3, 3));
-        index.Insert(std::make_pair(5, 5));
-        index.Insert(std::make_pair(7, 7));
-        index.Insert(std::make_pair(9, 9));
+        index.InsertOptimistic(std::make_pair(1, 1));
+        index.InsertOptimistic(std::make_pair(3, 3));
+        index.InsertOptimistic(std::make_pair(5, 5));
+        index.InsertOptimistic(std::make_pair(7, 7));
+        index.InsertOptimistic(std::make_pair(9, 9));
 
-        index.Insert(std::make_pair(8, 8));
-        index.Insert(std::make_pair(6, 6));
-        index.Insert(std::make_pair(4, 4));
-        index.Insert(std::make_pair(2, 2));
+        index.InsertOptimistic(std::make_pair(8, 8));
+        index.InsertOptimistic(std::make_pair(6, 6));
+        index.InsertOptimistic(std::make_pair(4, 4));
+        index.InsertOptimistic(std::make_pair(2, 2));
 
         /**
          *
@@ -289,12 +289,12 @@ namespace bplustree {
     TEST(BPlusTreeDeleteTest, BorrowOneFromNextLeafNode) {
         auto index = bplustree::BPlusTree(3, 4);
 
-        index.Insert(std::make_pair(1, 1));
-        index.Insert(std::make_pair(3, 3));
-        index.Insert(std::make_pair(5, 5));
-        index.Insert(std::make_pair(7, 7));
-        index.Insert(std::make_pair(9, 9));
-        index.Insert(std::make_pair(11, 11));
+        index.InsertOptimistic(std::make_pair(1, 1));
+        index.InsertOptimistic(std::make_pair(3, 3));
+        index.InsertOptimistic(std::make_pair(5, 5));
+        index.InsertOptimistic(std::make_pair(7, 7));
+        index.InsertOptimistic(std::make_pair(9, 9));
+        index.InsertOptimistic(std::make_pair(11, 11));
 
 
         /**
@@ -359,13 +359,13 @@ namespace bplustree {
 
         auto index = bplustree::BPlusTree(3, 4);
 
-        index.Insert(std::make_pair(1, 1));
-        index.Insert(std::make_pair(3, 3));
-        index.Insert(std::make_pair(5, 5));
-        index.Insert(std::make_pair(7, 7));
-        index.Insert(std::make_pair(9, 9));
-        index.Insert(std::make_pair(11, 11));
-        index.Insert(std::make_pair(13, 13));
+        index.InsertOptimistic(std::make_pair(1, 1));
+        index.InsertOptimistic(std::make_pair(3, 3));
+        index.InsertOptimistic(std::make_pair(5, 5));
+        index.InsertOptimistic(std::make_pair(7, 7));
+        index.InsertOptimistic(std::make_pair(9, 9));
+        index.InsertOptimistic(std::make_pair(11, 11));
+        index.InsertOptimistic(std::make_pair(13, 13));
 
         /**
          *
@@ -424,7 +424,7 @@ namespace bplustree {
 
         std::vector insert_keys{3, 6, 9, 12, 15, 18, 21, 27, 33, 39, 45};
         for (auto &x: insert_keys) {
-            index.Insert(std::make_pair(x, x));
+            index.InsertOptimistic(std::make_pair(x, x));
         }
 
         /**
@@ -537,7 +537,7 @@ namespace bplustree {
 
         std::vector insert_keys{3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39, 42};
         for (auto &x: insert_keys) {
-            index.Insert(std::make_pair(x, x));
+            index.InsertOptimistic(std::make_pair(x, x));
         }
 
         /**
@@ -648,7 +648,7 @@ namespace bplustree {
 
         std::vector insert_keys{3, 6, 9, 12, 15, 18, 21, 24, 4, 5, 7, 8, 10};
         for (auto &x: insert_keys) {
-            index.Insert(std::make_pair(x, x));
+            index.InsertOptimistic(std::make_pair(x, x));
         }
 
         /**
@@ -763,7 +763,7 @@ namespace bplustree {
 
         std::vector insert_keys{3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39, 42};
         for (auto &x: insert_keys) {
-            index.Insert(std::make_pair(x, x));
+            index.InsertOptimistic(std::make_pair(x, x));
         }
 
         /**
@@ -873,7 +873,7 @@ namespace bplustree {
 
         std::vector insert_keys{3, 6, 9, 12};
         for (auto &x: insert_keys) {
-            index.Insert(std::make_pair(x, x));
+            index.InsertOptimistic(std::make_pair(x, x));
         }
 
         /**

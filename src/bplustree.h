@@ -915,6 +915,20 @@ namespace bplustree {
             split_node->SetSiblingRight(node->GetSiblingRight());
             node->SetSiblingRight(split_node);
 
+            /**
+             * Bug:
+             *
+             * This one was a difficult one to track down. When the optimistic
+             * approach failed because the node will split, the exclusive lock
+             * acquired on the leaf node which split was not released. This
+             * was caught by testing insertions in random order.
+             *
+             * Since the exclusive write latch held on the leaf node was never
+             * relinquished any subsequent insert which arrived at this leaf
+             * node will end up deadlocking as it could not acquire an
+             * exclusive write latch anymore.
+             */
+            node->ReleaseNodeExclusiveLatch();
 
             KeyNodePointerPair inner_node_element = std::make_pair(split_node->Begin()->first, split_node);
             while (!insertion_finished && !stack_traversed_nodes.empty()) {

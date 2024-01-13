@@ -715,7 +715,7 @@ namespace bplustree {
             }
         }
 
-        /*
+        /**
          * Concurrency:
          *
          * In the first attempt we descend the B+Tree from the root to the
@@ -752,6 +752,14 @@ namespace bplustree {
          * way to the root node, changing the root of the B+Tree itself.
          * This extreme case is likely to happen less often. Most often
          * the inserts will happen in the optimistic path.
+         *
+         * @param key
+         * @param value
+         * @return true when insert is successful, false otherwise
+         *
+         * No support for duplicate keys. When a key already exists in the
+         * tree the insertion will not overwrite the existing key, and will
+         * return false.
          */
         bool InsertOptimistic(const KeyValuePair element) {
             root_latch_.LockExclusive();

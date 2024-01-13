@@ -641,7 +641,7 @@ namespace bplustree {
             return current_node;
         }
 
-        std::optional<int> FindValueOfKey(int key) {
+        std::optional<int> MaybeGet(int key) {
             root_latch_.LockShared();
 
             if (root_ == nullptr) {
@@ -1031,7 +1031,7 @@ namespace bplustree {
         bool Delete(const int keyToRemove) {
             if (root_ == nullptr) { return false; }
 
-            // Find the leaf node that contains key-value element
+            // MaybeGet the leaf node that contains key-value element
             BaseNode *current = root_;
             std::vector<BaseNode *> stack{};
 

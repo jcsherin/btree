@@ -13,7 +13,7 @@ namespace bplustree {
         for (auto &i: items) {
             index.Insert(std::make_pair(i, i));
 
-            EXPECT_EQ(index.FindValueOfKey(i), i);
+            EXPECT_EQ(index.MaybeGet(i), i);
         }
         EXPECT_NE(index.GetRoot(), nullptr);
 
@@ -42,7 +42,7 @@ namespace bplustree {
         for (auto &i: items) {
             index.Insert(std::make_pair(i, i));
 
-            ASSERT_EQ(index.FindValueOfKey(i), i);
+            ASSERT_EQ(index.MaybeGet(i), i);
         }
         EXPECT_NE(index.GetRoot(), nullptr);
 

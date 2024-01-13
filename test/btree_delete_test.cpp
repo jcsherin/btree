@@ -10,7 +10,7 @@ namespace bplustree {
         for (int i = 0; i < 4; ++i) {
             index.Insert(std::make_pair(i, i));
 
-            EXPECT_EQ(index.FindValueOfKey(i), i);
+            EXPECT_EQ(index.MaybeGet(i), i);
         }
 
         EXPECT_FALSE(index.Delete(4));
@@ -24,7 +24,7 @@ namespace bplustree {
         for (int i = 0; i < count; ++i) {
             index.Insert(std::make_pair(i, i));
 
-            EXPECT_EQ(index.FindValueOfKey(i), i);
+            EXPECT_EQ(index.MaybeGet(i), i);
         }
         EXPECT_NE(index.GetRoot(), nullptr);
 
@@ -32,7 +32,7 @@ namespace bplustree {
             auto deleted = index.Delete(i);
 
             EXPECT_TRUE(deleted);
-            EXPECT_EQ(index.FindValueOfKey(i), std::nullopt);
+            EXPECT_EQ(index.MaybeGet(i), std::nullopt);
         }
         EXPECT_EQ(index.GetRoot(), nullptr);
     }
@@ -46,7 +46,7 @@ namespace bplustree {
         for (auto &i: items) {
             index.Insert(std::make_pair(i, i));
 
-            EXPECT_EQ(index.FindValueOfKey(i), i);
+            EXPECT_EQ(index.MaybeGet(i), i);
         }
         EXPECT_NE(index.GetRoot(), nullptr);
 
@@ -58,7 +58,7 @@ namespace bplustree {
             auto deleted = index.Delete(i);
 
             EXPECT_TRUE(deleted);
-            EXPECT_EQ(index.FindValueOfKey(i), std::nullopt);
+            EXPECT_EQ(index.MaybeGet(i), std::nullopt);
         }
 
         EXPECT_EQ(index.GetRoot(), nullptr);
@@ -77,7 +77,7 @@ namespace bplustree {
         ASSERT_EQ(root->GetMinSize(), 2);
 
         index.Delete(1);
-        EXPECT_EQ(index.FindValueOfKey(1), std::nullopt);
+        EXPECT_EQ(index.MaybeGet(1), std::nullopt);
 
         ASSERT_EQ(root->GetCurrentSize(), 1);
         EXPECT_EQ(root, index.GetRoot());
@@ -122,7 +122,7 @@ namespace bplustree {
         EXPECT_EQ(leaf2->GetCurrentSize(), 3); // keys: 3, 4, 5
 
         index.Delete(4);
-        EXPECT_EQ(index.FindValueOfKey(4), std::nullopt);
+        EXPECT_EQ(index.MaybeGet(4), std::nullopt);
         EXPECT_EQ(leaf2->GetCurrentSize(), 2);
 
         std::vector current_keys{keys};
@@ -188,7 +188,7 @@ namespace bplustree {
          */
 
         index.Delete( 8);
-        EXPECT_EQ(index.FindValueOfKey(8), std::nullopt);
+        EXPECT_EQ(index.MaybeGet(8), std::nullopt);
 
         EXPECT_EQ(index.GetRoot()->GetType(), NodeType::InnerType);
         auto root = static_cast<InnerNode *>(index.GetRoot());
@@ -266,10 +266,10 @@ namespace bplustree {
          */
 
         index.Delete( 8);
-        EXPECT_EQ(index.FindValueOfKey(8), std::nullopt);
+        EXPECT_EQ(index.MaybeGet(8), std::nullopt);
 
         index.Delete( 7);
-        EXPECT_EQ(index.FindValueOfKey(7), std::nullopt);
+        EXPECT_EQ(index.MaybeGet(7), std::nullopt);
 
         EXPECT_EQ(index.GetRoot()->GetType(), NodeType::InnerType);
         auto root = static_cast<InnerNode *>(index.GetRoot());
@@ -333,7 +333,7 @@ namespace bplustree {
          */
 
         index.Delete( 1);
-        EXPECT_EQ(index.FindValueOfKey(1), std::nullopt);
+        EXPECT_EQ(index.MaybeGet(1), std::nullopt);
 
         EXPECT_EQ(index.GetRoot()->GetType(), NodeType::InnerType);
         auto root = static_cast<InnerNode *>(index.GetRoot());
@@ -403,7 +403,7 @@ namespace bplustree {
          */
 
         index.Delete( 1);
-        EXPECT_EQ(index.FindValueOfKey(1), std::nullopt);
+        EXPECT_EQ(index.MaybeGet(1), std::nullopt);
 
         EXPECT_EQ(index.GetRoot()->GetType(), NodeType::InnerType);
         auto root = static_cast<InnerNode *>(index.GetRoot());
@@ -627,7 +627,7 @@ namespace bplustree {
         EXPECT_EQ(inner->Begin()->second->GetType(), NodeType::LeafType);
         EXPECT_EQ(inner->RBegin()->first, 21);
 
-        EXPECT_EQ(index.FindValueOfKey(9), std::nullopt);
+        EXPECT_EQ(index.MaybeGet(9), std::nullopt);
 
         std::vector remaining_keys{3, 6, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39, 42};
         // Verify forward iteration
@@ -742,7 +742,7 @@ namespace bplustree {
         EXPECT_EQ(prev_inner->Begin()->first, 5);
         EXPECT_EQ(prev_inner->Begin()->second->GetType(), NodeType::LeafType);
 
-        EXPECT_EQ(index.FindValueOfKey(21), std::nullopt);
+        EXPECT_EQ(index.MaybeGet(21), std::nullopt);
 
         std::vector remaining_keys{3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 18, 24};
         // Verify forward iteration
@@ -852,7 +852,7 @@ namespace bplustree {
         EXPECT_EQ(prev_inner->Begin()->second->GetType(), NodeType::LeafType);
         EXPECT_EQ(prev_inner->RBegin()->first, 15);
 
-        EXPECT_EQ(index.FindValueOfKey(21), std::nullopt);
+        EXPECT_EQ(index.MaybeGet(21), std::nullopt);
 
         std::vector remaining_keys{3, 6, 9, 12, 15, 18, 24, 27, 30, 33, 36, 39, 42};
         // Verify forward iteration
@@ -897,7 +897,7 @@ namespace bplustree {
 
         // Collapse a level
         index.Delete( 9);
-        EXPECT_EQ(index.FindValueOfKey(9), std::nullopt);
+        EXPECT_EQ(index.MaybeGet(9), std::nullopt);
 
         /**
          *      +------------+

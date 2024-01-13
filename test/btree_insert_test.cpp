@@ -11,7 +11,7 @@ namespace bplustree {
         std::iota(items.begin(), items.end(), 0);
 
         for (auto &i: items) {
-            index.InsertOptimistic(std::make_pair(i, i));
+            index.Insert(std::make_pair(i, i));
 
             EXPECT_EQ(index.FindValueOfKey(i), i);
         }
@@ -40,7 +40,7 @@ namespace bplustree {
         std::shuffle(items.begin(), items.end(), g);
 
         for (auto &i: items) {
-            index.InsertOptimistic(std::make_pair(i, i));
+            index.Insert(std::make_pair(i, i));
 
             ASSERT_EQ(index.FindValueOfKey(i), i);
         }

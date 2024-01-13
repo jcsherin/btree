@@ -761,7 +761,7 @@ namespace bplustree {
          * tree the insertion will not overwrite the existing key, and will
          * return false.
          */
-        bool InsertOptimistic(const KeyValuePair element) {
+        bool Insert(const KeyValuePair element) {
             root_latch_.LockExclusive();
 
             if (root_ == nullptr) {

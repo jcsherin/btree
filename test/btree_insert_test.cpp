@@ -62,4 +62,17 @@ namespace bplustree {
         BPlusTree index{4, 5};
         EXPECT_EQ(index.GetRoot(), nullptr);
     }
+
+    TEST(BPlusTreeInsertTest, FetchFromEmptyTree) {
+        BPlusTree index{4, 5};
+        EXPECT_EQ(index.GetRoot(), nullptr);
+
+
+        std::vector<int> items(10000);
+        std::iota(items.begin(), items.end(), 0);
+
+        for (auto &key: items) {
+            EXPECT_EQ(index.MaybeGet(key), std::nullopt);
+        }
+    }
 }

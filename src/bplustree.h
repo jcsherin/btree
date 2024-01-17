@@ -1859,20 +1859,18 @@ namespace bplustree {
                 BPLUSTREE_ASSERT(holds_root_latch, "Exclusive root latch held");
                 BPLUSTREE_ASSERT(inner_node == root_, "delete returned back to root node");
 
-                if (inner_node->GetCurrentSize() > 0) { return true; }
+                if (inner_node->GetCurrentSize() == 0) {
+                    auto old_root = root_;
+                    root_ = inner_node->GetLowKeyPair().second;
 
-                /*
-                 * Root node contains only a single child pointer, so we
-                 * promote that child as the new root of the B+Tree and
-                 * free the old root.
-                 */
-                auto old_root = root_;
-                root_ = inner_node->GetLowKeyPair().second;
+                    inner_node->ReleaseNodeExclusiveLatch();
 
-                inner_node->ReleaseNodeExclusiveLatch();
+                    static_cast<InnerNode *>(old_root)->FreeElasticNode();
+                } else {
+                    inner_node->ReleaseNodeExclusiveLatch();
+                }
+
                 root_latch_.UnlockExclusive();
-
-                static_cast<InnerNode *>(old_root)->FreeElasticNode();
 
                 return true;
             }

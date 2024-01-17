@@ -1447,7 +1447,408 @@ namespace bplustree {
                 holds_root_latch = false;
                 root_latch_.UnlockExclusive();
             }
-            
+
+            return false;
+        }
+
+        bool DeleteOpt2(const int keyToRemove) {
+            /**
+             * Optimistic Approach:
+             *
+             * Assume the leaf node will not underflow when this key-value
+             * element is removed. Therefore we do not need to acquire
+             * exclusive write latches while traversing the B+Tree. We
+             * only acquire an exclusive write latch on the leaf node from
+             * which the key-value element needs to be removed.
+             */
+
+            root_latch_.LockExclusive();
+
+            // Empty B+Tree
+            if (root_ == nullptr) {
+                root_latch_.UnlockExclusive();
+                return false;
+            }
+
+            BaseNode *current = root_;
+            BaseNode *parent = nullptr;
+
+            current->GetNodeSharedLatch();
+            while (current->GetType() != NodeType::LeafType) {
+                if (parent != nullptr) {
+                    parent->ReleaseNodeSharedLatch();
+                } else {
+                    root_latch_.UnlockExclusive();
+                }
+
+                parent = current;
+                current = static_cast<InnerNode *>(current)->FindPivot(keyToRemove)->second;
+            }
+
+            current->ReleaseNodeSharedLatch();
+            current->GetNodeExclusiveLatch();
+
+            if (parent != nullptr) {
+                parent->ReleaseNodeSharedLatch();
+            } else {
+                root_latch_.UnlockExclusive();
+            }
+
+            auto node = static_cast<LeafNode *>(current);
+            auto iter = node->FindLocation(keyToRemove);
+
+            // Key does not exist in the node
+            if (iter == node->End()) {
+                current->ReleaseNodeExclusiveLatch();
+                return false;
+            }
+
+            // Does not match the key to be removed
+            if (keyToRemove != iter->first) {
+                current->ReleaseNodeExclusiveLatch();
+                return false;
+            }
+
+            bool safe_to_delete = true;
+
+            root_latch_.LockShared();
+            if (root_ == node && node->GetCurrentSize() == 1) {
+                /**
+                 * Do not proceed with delete if this is the only key-value
+                 * element in the root node.
+                 */
+                safe_to_delete = false;
+            } else if (node->GetCurrentSize() == node->GetMinSize()) {
+                /**
+                 * Do not proceed with delete if it will cause the leaf node
+                 * to underflow.
+                 */
+                safe_to_delete = false;
+            }
+            root_latch_.UnlockShared();
+
+            if (safe_to_delete) {
+                node->DeleteElement(iter);
+                current->ReleaseNodeExclusiveLatch();
+                return true;
+            }
+
+            current->ReleaseNodeExclusiveLatch();
+            /**
+             * Optimistic approach failed.
+             */
+
+            root_latch_.LockExclusive();
+            bool holds_root_latch = true;
+
+            current = root_;
+            current->GetNodeExclusiveLatch();
+
+            std::vector<BaseNode *> stack_latched_nodes{};
+            while (current->GetType() != NodeType::LeafType) {
+                auto node = static_cast<InnerNode *>(current);
+
+                // Release all parent latches if this node is safe
+                if (node->GetCurrentSize() > node->GetMinSize()) {
+                    while (!stack_latched_nodes.empty()) {
+                        (*stack_latched_nodes.rbegin())->ReleaseNodeExclusiveLatch();
+                        stack_latched_nodes.pop_back();
+                    }
+
+                    if (holds_root_latch) {
+                        root_latch_.UnlockExclusive();
+                        holds_root_latch = false;
+                    }
+                }
+
+                stack_latched_nodes.push_back(current);
+
+                current = node->FindPivot(keyToRemove)->second;
+                current->GetNodeExclusiveLatch();
+            }
+
+            node = static_cast<LeafNode *>(current);
+            iter = node->FindLocation(keyToRemove);
+
+            node->DeleteElement(iter);
+
+            /**
+             * When the last key-value element is removed the B+Tree becomes empty.
+             */
+            if (node == root_ && node->GetCurrentSize() == 0) {
+                BPLUSTREE_ASSERT(holds_root_latch, "Holds exclusive latch on root of B+Tree");
+
+                root_ = nullptr;
+
+                current->ReleaseNodeExclusiveLatch();
+
+                while (!stack_latched_nodes.empty()) {
+                    (*stack_latched_nodes.rbegin())->ReleaseNodeExclusiveLatch();
+                    stack_latched_nodes.pop_back();
+                }
+
+                if (holds_root_latch) {
+                    root_latch_.UnlockExclusive();
+                }
+
+                return true;
+            }
+
+            ElasticNode<KeyNodePointerPair> *inner_node{nullptr};
+            bool deletion_finished = false;
+
+            if (!stack_latched_nodes.empty()) {
+                auto parent = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(*stack_latched_nodes.rbegin());
+                stack_latched_nodes.pop_back();
+
+                /**
+                 * For re-balancing the tree the under-flowing leaf
+                 * node can either borrow an element from a neighbour
+                 * leaf node connected to the same parent inner node.
+                 *
+                 * We attempt to borrow one element from a neighbour
+                 * leaf node as long as it does not lead to underflow
+                 * of the neighbouring leaf node. If this is not
+                 * possible we then try to merge this node with one
+                 * of th neighbour leaf nodes.
+                 */
+
+                auto maybe_previous = static_cast<InnerNode *>(parent)->MaybePreviousWithSeparator(keyToRemove);
+                if (maybe_previous.has_value()) {
+                    auto other = reinterpret_cast<ElasticNode<KeyValuePair> *>((*maybe_previous).first);
+                    auto pivot = (*maybe_previous).second;
+
+                    bool will_underflow = (other->GetCurrentSize() - 1) < static_cast<LeafNode *>(other)->GetMinSize();
+                    if (!will_underflow) {
+                        node->InsertElementIfPossible((*other->RBegin()), node->Begin());
+                        other->PopEnd();
+                        pivot->first = node->Begin()->first;
+
+                        BPLUSTREE_ASSERT(node->GetCurrentSize() >= static_cast<LeafNode *>(node)->GetMinSize(),
+                                         "node meets minimum occupancy requirement after borrow from previous leaf node");
+                        BPLUSTREE_ASSERT(other->GetCurrentSize() >= static_cast<LeafNode *>(other)->GetMinSize(),
+                                         "borrowing one element did not cause underflow in previous leaf node");
+
+                        current->ReleaseNodeExclusiveLatch();
+                        deletion_finished = true;
+                    } else {
+                        BPLUSTREE_ASSERT(other->GetCurrentSize() + node->GetCurrentSize() <= node->GetMaxSize(),
+                                         "contents will fit a single leaf node after merge");
+                        other->MergeNode(node);
+                        if (node->GetSiblingRight() != nullptr) {
+                            static_cast<LeafNode *>(node->GetSiblingRight())->SetSiblingLeft(other);
+                        }
+                        other->SetSiblingRight(node->GetSiblingRight());
+
+                        parent->DeleteElement(pivot);
+
+                        current->ReleaseNodeExclusiveLatch();
+                        node->FreeElasticNode();
+                    }
+                } else {
+                    auto maybe_next = static_cast<InnerNode *>(parent)->MaybeNextWithSeparator(keyToRemove);
+                    if (maybe_next.has_value()) {
+                        auto other = reinterpret_cast<ElasticNode<KeyValuePair> *>((*maybe_next).first);
+                        auto pivot = (*maybe_next).second;
+
+                        bool will_underflow =
+                                (other->GetCurrentSize() - 1) < static_cast<LeafNode *>(other)->GetMinSize();
+                        if (!will_underflow) {
+                            node->InsertElementIfPossible((*other->Begin()), node->End());
+                            other->PopBegin();
+                            pivot->first = other->Begin()->first;
+
+                            BPLUSTREE_ASSERT(node->GetCurrentSize() >= static_cast<LeafNode *>(node)->GetMinSize(),
+                                             "node meets minimum occupancy requirement after borrow from previous leaf node");
+                            BPLUSTREE_ASSERT(other->GetCurrentSize() >= static_cast<LeafNode *>(other)->GetMinSize(),
+                                             "borrowing one element did not cause underflow in previous leaf node");
+
+                            current->ReleaseNodeExclusiveLatch();
+                            deletion_finished = true;
+                        } else {
+                            BPLUSTREE_ASSERT(other->GetCurrentSize() + node->GetCurrentSize() <= node->GetMaxSize(),
+                                             "contents will fit a single leaf node after merge");
+                            node->MergeNode(other);
+                            if (other->GetSiblingRight() != nullptr) {
+                                static_cast<LeafNode *>(other->GetSiblingRight())->SetSiblingLeft(node);
+                            }
+                            node->SetSiblingRight(other->GetSiblingRight());
+
+                            parent->DeleteElement(pivot);
+                            other->FreeElasticNode();
+
+                            current->ReleaseNodeExclusiveLatch();
+                        }
+                    }
+                }
+
+                if (parent->GetCurrentSize() >= static_cast<InnerNode *>(parent)->GetMinSize()) {
+                    deletion_finished = true;
+                    return true;
+                }
+
+                inner_node = parent;
+            }
+
+            if (deletion_finished) {
+                inner_node->ReleaseNodeExclusiveLatch();
+
+                while (!stack_latched_nodes.empty()) {
+                    (*stack_latched_nodes.rbegin())->ReleaseNodeExclusiveLatch();
+                    stack_latched_nodes.pop_back();
+                }
+
+                if (holds_root_latch) {
+                    root_latch_.UnlockExclusive();
+                }
+
+                return true;
+            }
+
+            // Re-balances tree
+            while (!stack_latched_nodes.empty()) {
+                auto parent = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(*stack_latched_nodes.rbegin());
+                stack_latched_nodes.pop_back();
+
+                auto maybe_previous = static_cast<InnerNode *>(parent)->MaybePreviousWithSeparator(keyToRemove);
+                if (maybe_previous.has_value()) {
+                    auto other = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>((*maybe_previous).first);
+                    auto pivot = (*maybe_previous).second;
+
+                    bool will_underflow = (other->GetCurrentSize() - 1) < static_cast<InnerNode *>(other)->GetMinSize();
+                    if (!will_underflow) {
+                        auto borrowed = *(other->RBegin());
+                        other->PopEnd();
+
+                        inner_node->InsertElementIfPossible(
+                                std::make_pair(pivot->first, inner_node->GetLowKeyPair().second),
+                                inner_node->Begin());
+                        inner_node->SetLowKeyPair(std::make_pair(pivot->first, borrowed.second));
+
+                        pivot->first = borrowed.first;
+                        /**
+                         *        (parent)
+                         *       +-------------+
+                         *       |...|Ky,Py|...|
+                         *       +-------------+
+                         *         /       \
+                         *        /         \
+                         *  +---------+    +--------+
+                         *  |...|Kx,Px|    |_,Pl|...|
+                         *  +---------+    +--------+
+                         *   (previous)    (underflow node)
+                         *
+                         *
+                         *        (parent)
+                         *       +-----------------+
+                         *       |...|  Kx,Py  |...|   <- pivot key updated
+                         *       +-----------------+
+                         *         /           \
+                         *        /             \
+                         *  +---------+        +--------------+
+                         *  |...|     |<--+    |_,Px|Ky,Pl|...| <--+
+                         *  +---------+   |    +--------------+    |
+                         *                |                        +-- Low key node pointer updated
+                         *                |                        +-- Old pivot key from parent and previous low key
+                         *                |                            node pointer added as the new first element
+                         *                |
+                         *                +--- last element removed from previous node
+                         */
+                    } else {
+                        other->InsertElementIfPossible(
+                                std::make_pair(pivot->first, inner_node->GetLowKeyPair().second),
+                                other->End()
+                        );
+                        other->MergeNode(inner_node);
+
+                        parent->DeleteElement(pivot);
+                        inner_node->FreeElasticNode();
+                    }
+                } else {
+                    auto maybe_next = static_cast<InnerNode *>(parent)->MaybeNextWithSeparator(keyToRemove);
+                    if (maybe_next.has_value()) {
+                        auto other = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>((*maybe_next).first);
+                        auto pivot = (*maybe_next).second;
+
+                        bool will_underflow =
+                                (other->GetCurrentSize() - 1) < static_cast<InnerNode *>(other)->GetMinSize();
+                        if (!will_underflow) {
+                            auto borrowed = *(other->Begin());
+                            other->PopBegin();
+
+                            inner_node->InsertElementIfPossible(
+                                    std::make_pair(pivot->first, other->GetLowKeyPair().second),
+                                    inner_node->End()
+                            );
+                            other->SetLowKeyPair(std::make_pair(pivot->first, borrowed.second));
+                            pivot->first = borrowed.first;
+                            /**
+                             *        (parent)
+                             *       +-------------+
+                             *       |...|Ky,Py|...|
+                             *       +-------------+
+                             *        /       \
+                             *       /         \
+                             *  +-------+    +--------------------+
+                             *  |...|...|    |_,Pl|Ko,Po|Ki,Pi|...|
+                             *  +-------+    +--------------------+
+                             *  (underflow) (next node)
+                             *
+                             *
+                             *             (parent)
+                             *            +-------------+
+                             *            |...|Ko,Py|...|
+                             *            +-------------+
+                             *             /      \
+                             *           /         \
+                             *  +---------+       +--------------+
+                             *  |...|Ky,Pl|<--+   |_,Po|Ki,Pi|...|<--+
+                             *  +---------+   |   +--------------+   |
+                             *                |                      |
+                             *                |                      +-- Low key node pointer removed
+                             *                |                      +-- First node pointer moved to low key node pointer
+                             *                |
+                             *                +-- Old Pivot + Low key node pointer from next node added as last element
+                             */
+                        } else {
+                            inner_node->InsertElementIfPossible(
+                                    std::make_pair(pivot->first, other->GetLowKeyPair().second),
+                                    inner_node->End()
+                            );
+                            inner_node->MergeNode(other);
+
+                            parent->DeleteElement(pivot);
+                            other->FreeElasticNode();
+                        }
+                    }
+                }
+
+                if (parent->GetCurrentSize() >= static_cast<InnerNode *>(parent)->GetMinSize()) {
+                    return true;
+                }
+
+                inner_node = parent;
+            }
+
+            /**
+             * Reduce tree depth if root node has insufficient children
+             */
+            if (inner_node != nullptr) {
+                BPLUSTREE_ASSERT(inner_node == root_, "delete returned back to root node");
+                if (inner_node->GetCurrentSize() > 0) { return true; }
+
+                /*
+                 * Root node contains only a single child pointer, so we
+                 * promote that child as the new root of the B+Tree and
+                 * free the old root.
+                 */
+                auto old_root = root_;
+                root_ = inner_node->GetLowKeyPair().second;
+
+                static_cast<InnerNode *>(old_root)->FreeElasticNode();
+                return true;
+            }
+
             return false;
         }
 

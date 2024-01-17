@@ -1684,7 +1684,6 @@ namespace bplustree {
 
                 if (parent->GetCurrentSize() >= static_cast<InnerNode *>(parent)->GetMinSize()) {
                     deletion_finished = true;
-                    return true;
                 }
 
                 inner_node = parent;
@@ -1706,7 +1705,7 @@ namespace bplustree {
             }
 
             // Re-balances tree
-            while (!stack_latched_nodes.empty()) {
+            while (!deletion_finished || !stack_latched_nodes.empty()) {
                 auto parent = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(*stack_latched_nodes.rbegin());
                 stack_latched_nodes.pop_back();
 
@@ -1726,6 +1725,8 @@ namespace bplustree {
                         inner_node->SetLowKeyPair(std::make_pair(pivot->first, borrowed.second));
 
                         pivot->first = borrowed.first;
+
+                        inner_node->ReleaseNodeExclusiveLatch();
                         /**
                          *        (parent)
                          *       +-------------+
@@ -1762,6 +1763,8 @@ namespace bplustree {
                         other->MergeNode(inner_node);
 
                         parent->DeleteElement(pivot);
+
+                        inner_node->ReleaseNodeExclusiveLatch();
                         inner_node->FreeElasticNode();
                     }
                 } else {
@@ -1782,6 +1785,8 @@ namespace bplustree {
                             );
                             other->SetLowKeyPair(std::make_pair(pivot->first, borrowed.second));
                             pivot->first = borrowed.first;
+
+                            inner_node->ReleaseNodeExclusiveLatch();
                             /**
                              *        (parent)
                              *       +-------------+
@@ -1819,22 +1824,41 @@ namespace bplustree {
 
                             parent->DeleteElement(pivot);
                             other->FreeElasticNode();
+
+                            inner_node->ReleaseNodeExclusiveLatch();
                         }
                     }
                 }
 
                 if (parent->GetCurrentSize() >= static_cast<InnerNode *>(parent)->GetMinSize()) {
-                    return true;
+                    deletion_finished = true;
                 }
 
                 inner_node = parent;
+            }
+
+            if (deletion_finished) {
+                inner_node->ReleaseNodeExclusiveLatch();
+
+                while (!stack_latched_nodes.empty()) {
+                    (*stack_latched_nodes.rbegin())->ReleaseNodeExclusiveLatch();
+                    stack_latched_nodes.pop_back();
+                }
+
+                if (holds_root_latch) {
+                    root_latch_.UnlockExclusive();
+                }
+
+                return true;
             }
 
             /**
              * Reduce tree depth if root node has insufficient children
              */
             if (inner_node != nullptr) {
+                BPLUSTREE_ASSERT(holds_root_latch, "Exclusive root latch held");
                 BPLUSTREE_ASSERT(inner_node == root_, "delete returned back to root node");
+
                 if (inner_node->GetCurrentSize() > 0) { return true; }
 
                 /*
@@ -1845,7 +1869,11 @@ namespace bplustree {
                 auto old_root = root_;
                 root_ = inner_node->GetLowKeyPair().second;
 
+                inner_node->ReleaseNodeExclusiveLatch();
+                root_latch_.UnlockExclusive();
+
                 static_cast<InnerNode *>(old_root)->FreeElasticNode();
+
                 return true;
             }
 

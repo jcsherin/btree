@@ -1059,7 +1059,9 @@ namespace bplustree {
                 }
 
                 parent = current;
+
                 current = static_cast<InnerNode *>(current)->FindPivot(keyToRemove)->second;
+                current->GetNodeSharedLatch();
             }
 
             current->ReleaseNodeSharedLatch();

@@ -1097,7 +1097,7 @@ namespace bplustree {
                  * element in the root node.
                  */
                 safe_to_delete = false;
-            } else if (node->GetCurrentSize() == node->GetMinSize()) {
+            } else if (root_ != node && node->GetCurrentSize() == node->GetMinSize()) {
                 /**
                  * Do not proceed with delete if it will cause the leaf node
                  * to underflow.

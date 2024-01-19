@@ -1284,7 +1284,7 @@ namespace bplustree {
             }
 
             // Re-balances tree
-            while (!deletion_finished || !stack_latched_nodes.empty()) {
+            while (!deletion_finished && !stack_latched_nodes.empty()) {
                 auto parent = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(*stack_latched_nodes.rbegin());
                 stack_latched_nodes.pop_back();
 

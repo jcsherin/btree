@@ -13,7 +13,7 @@ namespace bplustree {
             EXPECT_EQ(index.MaybeGet(i), i);
         }
 
-        EXPECT_FALSE(index.Delete(4));
+        EXPECT_FALSE(index.DeleteOptimistic(4));
     }
 
     TEST(BPlusTreeDeleteTest, DeleteEveryKey) {
@@ -29,7 +29,7 @@ namespace bplustree {
         EXPECT_NE(index.GetRoot(), nullptr);
 
         for (int i = 0; i < count; ++i) {
-            auto deleted = index.Delete(i);
+            auto deleted = index.DeleteOptimistic(i);
 
             EXPECT_TRUE(deleted);
             EXPECT_EQ(index.MaybeGet(i), std::nullopt);
@@ -55,7 +55,7 @@ namespace bplustree {
 
         std::shuffle(items.begin(), items.end(), g);
         for (auto &i: items) {
-            auto deleted = index.Delete(i);
+            auto deleted = index.DeleteOptimistic(i);
 
             EXPECT_TRUE(deleted);
             EXPECT_EQ(index.MaybeGet(i), std::nullopt);
@@ -76,7 +76,7 @@ namespace bplustree {
         ASSERT_EQ(root->GetCurrentSize(), 2);
         ASSERT_EQ(root->GetMinSize(), 2);
 
-        index.Delete(1);
+        index.DeleteOptimistic(1);
         EXPECT_EQ(index.MaybeGet(1), std::nullopt);
 
         ASSERT_EQ(root->GetCurrentSize(), 1);
@@ -121,7 +121,7 @@ namespace bplustree {
         EXPECT_EQ(leaf1->GetCurrentSize(), 2); // keys: 1, 2
         EXPECT_EQ(leaf2->GetCurrentSize(), 3); // keys: 3, 4, 5
 
-        index.Delete(4);
+        index.DeleteOptimistic(4);
         EXPECT_EQ(index.MaybeGet(4), std::nullopt);
         EXPECT_EQ(leaf2->GetCurrentSize(), 2);
 
@@ -187,7 +187,7 @@ namespace bplustree {
          *  therefore change it from 8 to 7.
          */
 
-        index.Delete( 8);
+        index.DeleteOptimistic(8);
         EXPECT_EQ(index.MaybeGet(8), std::nullopt);
 
         EXPECT_EQ(index.GetRoot()->GetType(), NodeType::InnerType);
@@ -265,10 +265,10 @@ namespace bplustree {
          *  parent node is also removed.
          */
 
-        index.Delete( 8);
+        index.DeleteOptimistic(8);
         EXPECT_EQ(index.MaybeGet(8), std::nullopt);
 
-        index.Delete( 7);
+        index.DeleteOptimistic(7);
         EXPECT_EQ(index.MaybeGet(7), std::nullopt);
 
         EXPECT_EQ(index.GetRoot()->GetType(), NodeType::InnerType);
@@ -332,7 +332,7 @@ namespace bplustree {
          *   in the parent node.
          */
 
-        index.Delete( 1);
+        index.DeleteOptimistic(1);
         EXPECT_EQ(index.MaybeGet(1), std::nullopt);
 
         EXPECT_EQ(index.GetRoot()->GetType(), NodeType::InnerType);
@@ -402,7 +402,7 @@ namespace bplustree {
          *  node pointer is removed from the parent node.
          */
 
-        index.Delete( 1);
+        index.DeleteOptimistic(1);
         EXPECT_EQ(index.MaybeGet(1), std::nullopt);
 
         EXPECT_EQ(index.GetRoot()->GetType(), NodeType::InnerType);
@@ -483,7 +483,7 @@ namespace bplustree {
         EXPECT_EQ(next_inner->Begin()->second->GetType(), NodeType::LeafType);
 
         // Trigger borrow from next inner node
-        index.Delete( 9);
+        index.DeleteOptimistic(9);
 
         /**
          * B+Tree after borrowing from next inner node:
@@ -597,7 +597,7 @@ namespace bplustree {
         EXPECT_EQ(next_inner->Begin()->second->GetType(), NodeType::LeafType);
 
         // Trigger borrow from next inner node
-        index.Delete( 9);
+        index.DeleteOptimistic(9);
 
         /**
          * B+Tree after merge with next inner node:
@@ -708,7 +708,7 @@ namespace bplustree {
 
 
         // Trigger borrow from previous inner node
-        index.Delete( 21);
+        index.DeleteOptimistic(21);
 
         /**
          * B+Tree after borrow from previous inner node:
@@ -822,7 +822,7 @@ namespace bplustree {
         EXPECT_EQ(prev_inner->Begin()->second->GetType(), NodeType::LeafType);
 
         // Trigger borrow from next prev_inner node
-        index.Delete( 21);
+        index.DeleteOptimistic(21);
 
         /**
          * B+Tree after insertions:
@@ -896,7 +896,7 @@ namespace bplustree {
         EXPECT_EQ(root->Begin()->first, 9);
 
         // Collapse a level
-        index.Delete( 9);
+        index.DeleteOptimistic(9);
         EXPECT_EQ(index.MaybeGet(9), std::nullopt);
 
         /**

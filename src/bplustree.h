@@ -1028,7 +1028,7 @@ namespace bplustree {
             return true;
         }
 
-        bool DeleteOptimistic(const int keyToRemove) {
+        bool Delete(const int keyToRemove) {
             /**
              * Optimistic Approach:
              *

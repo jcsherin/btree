@@ -1186,7 +1186,11 @@ namespace bplustree {
                                          "contents will fit a single leaf node after merge");
                         other->MergeNode(node);
                         if (node->GetSiblingRight() != nullptr) {
-                            static_cast<LeafNode *>(node->GetSiblingRight())->SetSiblingLeft(other);
+                            auto sibling_right = static_cast<LeafNode *>(node->GetSiblingRight());
+
+                            sibling_right->GetNodeExclusiveLatch();
+                            sibling_right->SetSiblingLeft(other);
+                            sibling_right->ReleaseNodeExclusiveLatch();
                         }
                         other->SetSiblingRight(node->GetSiblingRight());
 
@@ -1220,7 +1224,11 @@ namespace bplustree {
                                              "contents will fit a single leaf node after merge");
                             node->MergeNode(other);
                             if (other->GetSiblingRight() != nullptr) {
-                                static_cast<LeafNode *>(other->GetSiblingRight())->SetSiblingLeft(node);
+                                auto sibling_right = static_cast<LeafNode *>(other->GetSiblingRight());
+
+                                sibling_right->GetNodeExclusiveLatch();
+                                sibling_right->SetSiblingLeft(node);
+                                sibling_right->ReleaseNodeExclusiveLatch();
                             }
                             node->SetSiblingRight(other->GetSiblingRight());
 

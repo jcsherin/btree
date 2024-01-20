@@ -656,17 +656,8 @@ namespace bplustree {
             root_latch_.UnlockShared();
 
             while (current_node->GetType() != NodeType::LeafType) {
-                auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
-                auto iter = static_cast<InnerNode *>(node)->FindLocation(key);
-
                 parent_node = current_node;
-                if (iter == node->End()) {
-                    current_node = std::prev(iter)->second;
-                } else if (key == iter->first) {
-                    current_node = iter->second;
-                } else {
-                    current_node = (iter != node->Begin()) ? std::prev(iter)->second : node->GetLowKeyPair().second;
-                }
+                current_node = static_cast<InnerNode *>(current_node)->FindPivot(key)->second;
 
                 current_node->GetNodeSharedLatch();
                 parent_node->ReleaseNodeSharedLatch();
@@ -785,25 +776,14 @@ namespace bplustree {
 
             // Search for leaf node traversing down the B+Tree
             while (current_node->GetType() != NodeType::LeafType) {
-                auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
-
                 if (parent_node != nullptr) {
                     parent_node->ReleaseNodeSharedLatch();
                 } else {
                     root_latch_.UnlockExclusive();
                 }
 
-                auto iter = static_cast<InnerNode *>(node)->FindLocation(element.first);
-
                 parent_node = current_node;
-                if (iter == node->End()) {
-                    current_node = std::prev(iter)->second;
-                } else if (element.first == iter->first) {
-                    current_node = iter->second;
-                } else { // element.first < iter->first
-                    current_node = (iter != node->Begin()) ? std::prev(iter)->second : node->GetLowKeyPair().second;
-                }
-
+                current_node = static_cast<InnerNode *>(current_node)->FindPivot(element.first)->second;
                 current_node->GetNodeSharedLatch();
             }
 
@@ -863,16 +843,7 @@ namespace bplustree {
                 }
 
                 stack_traversed_nodes.push_back(current_node);
-
-                auto iter = static_cast<InnerNode *>(node)->FindLocation(element.first);
-                if (iter == node->End()) {
-                    current_node = std::prev(iter)->second;
-                } else if (element.first == iter->first) {
-                    current_node = iter->second;
-                } else { // element.first < iter->first
-                    current_node = (iter != node->Begin()) ? std::prev(iter)->second : node->GetLowKeyPair().second;
-                }
-
+                current_node = static_cast<InnerNode *>(node)->FindPivot(element.first)->second;
                 current_node->GetNodeExclusiveLatch();
             }
 

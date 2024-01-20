@@ -550,7 +550,7 @@ namespace bplustree {
 
     private:
         enum IteratorState {
-            VALID, INVALID, END, REND
+            VALID, INVALID, END, REND, RETRY
         };
 
         // Iterator is currently at this leaf node
@@ -574,6 +574,11 @@ namespace bplustree {
         void SetREndIterator() {
             ResetIterator();
             state_ = REND;
+        }
+
+        void SetRetryIterator() {
+            ResetIterator();
+            state_ = RETRY;
         }
     };
 

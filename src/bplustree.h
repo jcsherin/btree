@@ -623,27 +623,51 @@ namespace bplustree {
         }
 
         BaseNode *FindLeafNode() {
-            if (root_ == nullptr) { return nullptr; }
-
-            BaseNode *current_node = root_;
-            while (current_node->GetType() != NodeType::LeafType) {
-                auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
-                current_node = node->GetLowKeyPair().second;
+            root_latch_.LockShared();
+            if (root_ == nullptr) {
+                root_latch_.UnlockShared();
+                return nullptr;
             }
 
-            return current_node;
+            BaseNode *current = root_;
+            BaseNode *parent = nullptr;
+
+            current->GetNodeSharedLatch();
+            root_latch_.UnlockShared();
+
+            while (current->GetType() != NodeType::LeafType) {
+                parent = current;
+                current = static_cast<InnerNode *>(current)->GetLowKeyPair().second;
+
+                current->GetNodeSharedLatch();
+                parent->ReleaseNodeSharedLatch();
+            }
+
+            return current;
         }
 
         BaseNode *FindLastLeafNode() {
-            if (root_ == nullptr) { return nullptr; }
-
-            BaseNode *current_node = root_;
-            while (current_node->GetType() != NodeType::LeafType) {
-                auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
-                current_node = std::prev(node->End())->second;
+            root_latch_.LockShared();
+            if (root_ == nullptr) {
+                root_latch_.UnlockShared();
+                return nullptr;
             }
 
-            return current_node;
+            BaseNode *current = root_;
+            BaseNode *parent = nullptr;
+
+            current->GetNodeSharedLatch();
+            root_latch_.UnlockShared();
+
+            while (current->GetType() != NodeType::LeafType) {
+                parent = current;
+                current = std::prev(static_cast<InnerNode *>(current)->End())->second;
+
+                current->GetNodeSharedLatch();
+                parent->ReleaseNodeSharedLatch();
+            }
+
+            return current;
         }
 
         std::optional<int> MaybeGet(int key) {

@@ -500,11 +500,21 @@ namespace bplustree {
             }
 
             if (current_node_->GetSiblingRight() == nullptr) {
+                current_node_->ReleaseNodeSharedLatch();
                 SetEndIterator();
                 return;
             }
 
+            auto previous_node = current_node_;
             current_node_ = static_cast<ElasticNode<KeyValuePair> *>(current_node_->GetSiblingRight());
+
+            if (!(current_node_->TrySharedLock())) {
+                previous_node->ReleaseNodeSharedLatch();
+                SetRetryIterator();
+                return;
+            }
+            previous_node->ReleaseNodeSharedLatch();
+
             current_element_ = current_node_->Begin();
         }
 
@@ -517,10 +527,21 @@ namespace bplustree {
             }
 
             if (current_node_->GetSiblingLeft() == nullptr) {
+                current_node_->ReleaseNodeSharedLatch();
                 SetREndIterator();
                 return;
             }
+
+            auto previous_node = current_node_;
             current_node_ = static_cast<ElasticNode<KeyValuePair> *>(current_node_->GetSiblingLeft());
+
+            if (!(current_node_->TrySharedLock())) {
+                previous_node->ReleaseNodeSharedLatch();
+                SetRetryIterator();
+                return;
+            }
+            previous_node->ReleaseNodeSharedLatch();
+
             current_element_ = std::prev(current_node_->End());
         }
 

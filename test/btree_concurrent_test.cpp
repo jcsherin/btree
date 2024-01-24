@@ -7,10 +7,10 @@ namespace bplustree {
     TEST(BPlusTreeConcurrentTest, ConcurrentInserts) {
         BPlusTree index{3, 4};
 
-        std::vector<int> keys(12);
+        std::vector<int> keys(1000 * 1000);
         std::iota(keys.begin(), keys.end(), 0);
 
-        int worker_threads = 2;
+        int worker_threads = 8;
         int keys_per_worker = keys.size() / worker_threads;
 
         auto index_insert_workload = [&](uint32_t worker_id) {

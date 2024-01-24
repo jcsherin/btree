@@ -904,6 +904,31 @@ namespace bplustree {
             }
 
             node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+
+            /**
+             * Duplicates work done in the optimistic approach:
+             * - In between the failed optimistic run and this run it is possible
+             * that a duplicate key may have been inserted.
+             * - It is possible that the leaf node which was full is not full
+             * anymore, and we can insert the key-value element immediately
+             * without further splitting.
+             */
+            iter = static_cast<LeafNode *>(node)->FindLocation(element.first);
+
+            if (iter != node->End() && element.first == iter->first) { // Duplicate insertion
+                node->ReleaseNodeExclusiveLatch();
+                ReleaseAllWriteLatches(stack_traversed_nodes, holds_root_latch);
+
+                return false;
+            }
+
+            if (node->InsertElementIfPossible(element, iter)) {
+                node->ReleaseNodeExclusiveLatch();
+                ReleaseAllWriteLatches(stack_traversed_nodes, holds_root_latch);
+
+                return true;
+            }
+
             auto split_node = node->SplitNode();
             if (element.first >= split_node->Begin()->first) {
                 split_node->InsertElementIfPossible(

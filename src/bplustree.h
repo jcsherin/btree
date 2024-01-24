@@ -764,6 +764,20 @@ namespace bplustree {
             }
         }
 
+        bool ReleaseAllWriteLatches(std::vector<BaseNode *> &latches, bool holds_root_latch) {
+            while (!latches.empty()) {
+                (*latches.rbegin())->ReleaseNodeExclusiveLatch();
+                latches.pop_back();
+            }
+
+            if (holds_root_latch) {
+                root_latch_.UnlockExclusive();
+                holds_root_latch = false;
+            }
+
+            return holds_root_latch;
+        }
+
         /**
          * Concurrency:
          *
@@ -881,15 +895,7 @@ namespace bplustree {
 
                 // Release all parent exclusive locks if this inner node is safe
                 if (node->GetCurrentSize() < node->GetMaxSize()) {
-                    while (!stack_traversed_nodes.empty()) {
-                        (*stack_traversed_nodes.rbegin())->ReleaseNodeExclusiveLatch();
-                        stack_traversed_nodes.pop_back();
-                    }
-
-                    if (holds_root_latch) {
-                        root_latch_.UnlockExclusive();
-                        holds_root_latch = false;
-                    }
+                    holds_root_latch = ReleaseAllWriteLatches(stack_traversed_nodes, holds_root_latch);
                 }
 
                 stack_traversed_nodes.push_back(current_node);
@@ -1150,15 +1156,7 @@ namespace bplustree {
 
                 // Release all parent latches if this node is safe
                 if (node->GetCurrentSize() > node->GetMinSize()) {
-                    while (!stack_latched_nodes.empty()) {
-                        (*stack_latched_nodes.rbegin())->ReleaseNodeExclusiveLatch();
-                        stack_latched_nodes.pop_back();
-                    }
-
-                    if (holds_root_latch) {
-                        root_latch_.UnlockExclusive();
-                        holds_root_latch = false;
-                    }
+                    holds_root_latch = ReleaseAllWriteLatches(stack_latched_nodes, holds_root_latch);
                 }
 
                 stack_latched_nodes.push_back(current);
@@ -1177,19 +1175,9 @@ namespace bplustree {
              */
             if (node == root_ && node->GetCurrentSize() == 0) {
                 BPLUSTREE_ASSERT(holds_root_latch, "Holds exclusive latch on root of B+Tree");
-
                 root_ = nullptr;
-
                 current->ReleaseNodeExclusiveLatch();
-
-                while (!stack_latched_nodes.empty()) {
-                    (*stack_latched_nodes.rbegin())->ReleaseNodeExclusiveLatch();
-                    stack_latched_nodes.pop_back();
-                }
-
-                if (holds_root_latch) {
-                    root_latch_.UnlockExclusive();
-                }
+                holds_root_latch = ReleaseAllWriteLatches(stack_latched_nodes, holds_root_latch);
 
                 return true;
             }
@@ -1299,15 +1287,7 @@ namespace bplustree {
 
             if (deletion_finished) {
                 inner_node->ReleaseNodeExclusiveLatch();
-
-                while (!stack_latched_nodes.empty()) {
-                    (*stack_latched_nodes.rbegin())->ReleaseNodeExclusiveLatch();
-                    stack_latched_nodes.pop_back();
-                }
-
-                if (holds_root_latch) {
-                    root_latch_.UnlockExclusive();
-                }
+                holds_root_latch = ReleaseAllWriteLatches(stack_latched_nodes, holds_root_latch);
 
                 return true;
             }
@@ -1447,15 +1427,7 @@ namespace bplustree {
 
             if (deletion_finished) {
                 inner_node->ReleaseNodeExclusiveLatch();
-
-                while (!stack_latched_nodes.empty()) {
-                    (*stack_latched_nodes.rbegin())->ReleaseNodeExclusiveLatch();
-                    stack_latched_nodes.pop_back();
-                }
-
-                if (holds_root_latch) {
-                    root_latch_.UnlockExclusive();
-                }
+                holds_root_latch = ReleaseAllWriteLatches(stack_latched_nodes, holds_root_latch);
 
                 return true;
             }

@@ -1119,46 +1119,32 @@ namespace bplustree {
             current->ReleaseNodeSharedLatch();
             current->GetNodeExclusiveLatch();
 
+            bool removable = false;
+            auto node = static_cast<LeafNode *>(current);
+
             if (parent != nullptr) {
                 parent->ReleaseNodeSharedLatch();
+                removable = node->GetCurrentSize() > node->GetMinSize(); // underflow?
             } else {
                 root_latch_.UnlockExclusive();
+                // root node is also the leaf node
+                removable = node->GetCurrentSize() > 1; // will root change?
             }
 
-            auto node = static_cast<LeafNode *>(current);
             auto iter = node->FindLocation(keyToRemove);
+            if (removable) {
+                // Key does not exist in the node
+                if (iter == node->End()) {
+                    current->ReleaseNodeExclusiveLatch();
+                    return false;
+                }
 
-            // Key does not exist in the node
-            if (iter == node->End()) {
-                current->ReleaseNodeExclusiveLatch();
-                return false;
-            }
+                // Does not match the key to be removed
+                if (keyToRemove != iter->first) {
+                    current->ReleaseNodeExclusiveLatch();
+                    return false;
+                }
 
-            // Does not match the key to be removed
-            if (keyToRemove != iter->first) {
-                current->ReleaseNodeExclusiveLatch();
-                return false;
-            }
-
-            bool safe_to_delete = true;
-
-            root_latch_.LockShared();
-            if (root_ == node && node->GetCurrentSize() == 1) {
-                /**
-                 * Do not proceed with delete if this is the only key-value
-                 * element in the root node.
-                 */
-                safe_to_delete = false;
-            } else if (root_ != node && node->GetCurrentSize() == node->GetMinSize()) {
-                /**
-                 * Do not proceed with delete if it will cause the leaf node
-                 * to underflow.
-                 */
-                safe_to_delete = false;
-            }
-            root_latch_.UnlockShared();
-
-            if (safe_to_delete) {
                 node->DeleteElement(iter);
                 current->ReleaseNodeExclusiveLatch();
                 return true;

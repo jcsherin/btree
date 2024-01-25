@@ -916,4 +916,41 @@ namespace bplustree {
             EXPECT_EQ((*iter).first, remaining_keys[i++]);
         }
     }
+
+    TEST(BPlusTreeDeleteTest, DeleteAllKeysThenReinsert) {
+        auto index = bplustree::BPlusTree(3, 3);
+
+        std::vector<int> keys(100);
+        std::iota(keys.begin(), keys.end(), 0);
+
+        std::shuffle(keys.begin(), keys.end(), std::mt19937{std::random_device{}()});
+        for (auto &key: keys) {
+            index.Insert(std::make_pair(key, key));
+        }
+
+        int i = 0;
+        for (auto iter = index.Begin(); iter != index.End(); ++iter) {
+            EXPECT_EQ((*iter).first, i++);
+        }
+        EXPECT_EQ(i, keys.size());
+
+        for (auto &key: keys) {
+            index.Delete(key);
+            EXPECT_EQ(index.MaybeGet(key), std::nullopt);
+        }
+        EXPECT_EQ(index.Begin(), index.End());
+        EXPECT_EQ(index.RBegin(), index.REnd());
+
+
+        std::shuffle(keys.begin(), keys.end(), std::mt19937{std::random_device{}()});
+        for (auto &key: keys) {
+            index.Insert(std::make_pair(key, key));
+        }
+
+        int j = 0;
+        for (auto iter = index.Begin(); iter != index.End(); ++iter) {
+            EXPECT_EQ((*iter).first, j++);
+        }
+        EXPECT_EQ(j, keys.size());
+    }
 }

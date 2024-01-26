@@ -717,13 +717,10 @@ namespace bplustree {
             auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
             auto iter = static_cast<LeafNode *>(node)->FindLocation(key);
 
+            auto result = (iter == node->End() | key != iter->first) ? std::nullopt : std::optional<int>{iter->second};
             current_node->ReleaseNodeSharedLatch();
 
-            if (iter == node->End() || key != iter->first) {
-                return std::nullopt;
-            }
-
-            return std::optional<int>{iter->second};
+            return result;
         }
 
         void FreeTree() {

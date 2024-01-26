@@ -1308,6 +1308,8 @@ namespace bplustree {
                 auto maybe_previous = static_cast<InnerNode *>(parent)->MaybePreviousWithSeparator(keyToRemove);
                 if (maybe_previous.has_value()) {
                     auto other = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>((*maybe_previous).first);
+                    other->GetNodeExclusiveLatch();
+
                     auto pivot = (*maybe_previous).second;
 
                     bool will_underflow = (other->GetCurrentSize() - 1) < static_cast<InnerNode *>(other)->GetMinSize();
@@ -1363,11 +1365,15 @@ namespace bplustree {
                         inner_node->ReleaseNodeExclusiveLatch();
                         inner_node->FreeElasticNode();
                     }
+
+                    other->ReleaseNodeExclusiveLatch();
                 } else {
                     auto maybe_next = static_cast<InnerNode *>(parent)->MaybeNextWithSeparator(keyToRemove);
                     if (maybe_next.has_value()) {
                         auto other = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>((*maybe_next).first);
                         auto pivot = (*maybe_next).second;
+
+                        other->GetNodeExclusiveLatch();
 
                         bool will_underflow =
                                 (other->GetCurrentSize() - 1) < static_cast<InnerNode *>(other)->GetMinSize();
@@ -1382,6 +1388,7 @@ namespace bplustree {
                             other->SetLowKeyPair(std::make_pair(pivot->first, borrowed.second));
                             pivot->first = borrowed.first;
 
+                            other->ReleaseNodeExclusiveLatch();
                             inner_node->ReleaseNodeExclusiveLatch();
                             /**
                              *        (parent)
@@ -1419,6 +1426,8 @@ namespace bplustree {
                             inner_node->MergeNode(other);
 
                             parent->DeleteElement(pivot);
+
+                            other->ReleaseNodeExclusiveLatch();
                             other->FreeElasticNode();
 
                             inner_node->ReleaseNodeExclusiveLatch();

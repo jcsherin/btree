@@ -1214,6 +1214,8 @@ namespace bplustree {
                     auto other = reinterpret_cast<ElasticNode<KeyValuePair> *>((*maybe_previous).first);
                     auto pivot = (*maybe_previous).second;
 
+                    other->GetNodeExclusiveLatch();
+
                     bool will_underflow = (other->GetCurrentSize() - 1) < static_cast<LeafNode *>(other)->GetMinSize();
                     if (!will_underflow) {
                         node->InsertElementIfPossible((*other->RBegin()), node->Begin());
@@ -1245,11 +1247,15 @@ namespace bplustree {
                         current->ReleaseNodeExclusiveLatch();
                         node->FreeElasticNode();
                     }
+
+                    other->ReleaseNodeExclusiveLatch();
                 } else {
                     auto maybe_next = static_cast<InnerNode *>(parent)->MaybeNextWithSeparator(keyToRemove);
                     if (maybe_next.has_value()) {
                         auto other = reinterpret_cast<ElasticNode<KeyValuePair> *>((*maybe_next).first);
                         auto pivot = (*maybe_next).second;
+
+                        other->GetNodeExclusiveLatch();
 
                         bool will_underflow =
                                 (other->GetCurrentSize() - 1) < static_cast<LeafNode *>(other)->GetMinSize();
@@ -1264,6 +1270,8 @@ namespace bplustree {
                                              "borrowing one element did not cause underflow in previous leaf node");
 
                             current->ReleaseNodeExclusiveLatch();
+                            other->ReleaseNodeExclusiveLatch();
+
                             deletion_finished = true;
                         } else {
                             BPLUSTREE_ASSERT(other->GetCurrentSize() + node->GetCurrentSize() <= node->GetMaxSize(),
@@ -1279,6 +1287,8 @@ namespace bplustree {
                             node->SetSiblingRight(other->GetSiblingRight());
 
                             parent->DeleteElement(pivot);
+
+                            other->ReleaseNodeExclusiveLatch();
                             other->FreeElasticNode();
 
                             current->ReleaseNodeExclusiveLatch();

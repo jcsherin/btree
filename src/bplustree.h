@@ -1179,16 +1179,8 @@ namespace bplustree {
             node->DeleteElement(iter);
 
             /**
-             * When the last key-value element is removed the B+Tree becomes empty.
+             * Rebalance the B+Tree
              */
-            if (node == root_ && node->GetCurrentSize() == 0) {
-                BPLUSTREE_ASSERT(holds_root_latch, "Holds exclusive latch on root of B+Tree");
-                root_ = nullptr;
-                current->ReleaseNodeExclusiveLatch();
-                holds_root_latch = ReleaseAllWriteLatches(stack_latched_nodes, holds_root_latch);
-
-                return true;
-            }
 
             ElasticNode<KeyNodePointerPair> *inner_node{nullptr};
             bool deletion_finished = false;
@@ -1462,7 +1454,7 @@ namespace bplustree {
             /**
              * Reduce tree depth if root node has insufficient children
              */
-            if (inner_node != nullptr) {
+            if (!deletion_finished && inner_node != nullptr) {
                 BPLUSTREE_ASSERT(holds_root_latch, "Exclusive root latch held");
                 BPLUSTREE_ASSERT(inner_node == root_, "delete returned back to root node");
 
@@ -1482,7 +1474,25 @@ namespace bplustree {
                 return true;
             }
 
-            return false;
+            /**
+             * Update root if the B+Tree has no more elements left
+             */
+            if (!deletion_finished && inner_node == nullptr && node == root_) {
+                BPLUSTREE_ASSERT(holds_root_latch, "Has exclusive latch for modifying root");
+
+                if (node->GetCurrentSize() == 0) {
+                    node->FreeElasticNode();
+
+                    root_ = nullptr;
+                    root_latch_.UnlockExclusive();
+                } else {
+                    node->ReleaseNodeExclusiveLatch();
+
+                    root_latch_.UnlockExclusive();
+                }
+            }
+
+            return true;
         }
 
         std::string ToGraph() {

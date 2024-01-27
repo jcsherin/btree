@@ -1179,6 +1179,20 @@ namespace bplustree {
             node->DeleteElement(iter);
 
             /**
+             * Verify underflow condition exists before proceeding
+             * to rebalance the B+Tree. It is possible by the time
+             * we abandoned the optimistic approach and retried the
+             * node may have been rebalanced and will not underflow
+             * anymore.
+             */
+            if (node->GetCurrentSize() >= node->GetMinSize()) {
+                node->ReleaseNodeExclusiveLatch();
+                ReleaseAllWriteLatches(stack_latched_nodes, holds_root_latch);
+
+                return true;
+            }
+
+            /**
              * Rebalance the B+Tree
              */
 

@@ -72,7 +72,24 @@ namespace bplustree {
 
         // Empty B+Tree
         EXPECT_EQ(index.Begin(), index.End());
+        EXPECT_EQ(index.RBegin(), index.REnd());
 
-        // FIXME: Mutex lock failed when reinserting values into B+Tree
+        // Ensure insert works
+        for (int i = 0; i < 1000; ++i) {
+            index.Insert(std::make_pair(i, i));
+            EXPECT_EQ(index.MaybeGet(i), i);
+        }
+
+        int j = 0;
+        for (auto iter = index.Begin(); iter != index.End(); ++iter) {
+            EXPECT_EQ((*iter).first, j++);
+        }
+        EXPECT_EQ(j, 1000);
+
+        int k = 999;
+        for (auto iter = index.RBegin(); iter != index.REnd(); --iter) {
+            EXPECT_EQ((*iter).first, k--);
+        }
+        EXPECT_EQ(k, -1);
     }
 }

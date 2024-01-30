@@ -191,4 +191,47 @@ namespace bplustree {
         EXPECT_EQ(k, -1);
     }
 
+    TEST(BPlusTreeConcurrentTest, ConcurrentIterators) {
+        BPlusTree index{3, 4};
+
+        auto key_count = 1000 * 1000;
+        std::vector<int> keys(key_count);
+        std::iota(keys.begin(), keys.end(), 0);
+
+        std::random_device rd{};
+        std::shuffle(keys.begin(), keys.end(), std::mt19937{rd()});
+
+        for (auto &key: keys) {
+            index.Insert(std::make_pair(key, key));
+        }
+
+        int worker_threads = 8;
+        auto iterator_workload = [&](uint32_t worker_id) {
+            auto i = 0;
+            auto it = index.Begin();
+            for (; it != index.End() && it != index.Retry(); ++it, ++i) {
+                EXPECT_EQ((*it).first, i);
+                EXPECT_EQ((*it).second, i);
+            }
+            EXPECT_EQ(i, key_count);
+
+            auto j = key_count - 1;
+            auto rit = index.RBegin();
+            for (; rit != index.REnd() && rit != index.Retry(); --rit, --j) {
+                EXPECT_EQ((*rit).first, j);
+                EXPECT_EQ((*rit).second, j);
+            }
+            EXPECT_EQ(j, -1);
+        };
+
+
+        std::vector<std::thread> workers;
+        for (uint32_t worker_id = 0; worker_id < worker_threads; ++worker_id) {
+            workers.push_back(std::thread(iterator_workload, worker_id));
+        }
+
+        for (uint32_t worker_id = 0; worker_id < worker_threads; ++worker_id) {
+            workers[worker_id].join();
+        }
+    }
 }

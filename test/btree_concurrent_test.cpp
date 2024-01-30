@@ -346,4 +346,48 @@ namespace bplustree {
         EXPECT_EQ(k, -1);
     }
 
+
+    TEST(BPlusTreeConcurrentTest, MixedWorkload) {
+        BPlusTree index{3, 4};
+        auto insert_workload = [&](std::vector<int> keys) {
+            for (auto &key: keys) {
+                index.Insert(std::make_pair(key, key));
+            }
+        };
+
+        auto delete_workload = [&](std::vector<int> keys) {
+            for (auto &key: keys) {
+                index.Delete(key);
+            }
+        };
+
+        std::random_device rd{};
+        auto key_count = 1000;
+
+        std::vector<int> even_keys(key_count / 2);
+        auto e = -2;
+        std::generate(even_keys.begin(), even_keys.end(), [&e] { return (e += 2); });
+        std::shuffle(even_keys.begin(), even_keys.end(), std::mt19937{rd()});
+
+        std::vector<int> odd_keys(key_count / 2);
+        auto o = -1;
+        std::generate(odd_keys.begin(), odd_keys.end(), [&o] { return (o += 2); });
+        std::shuffle(odd_keys.begin(), odd_keys.end(), std::mt19937{rd()});
+
+        // Construct the initial tree
+        for (auto &key: odd_keys) {
+            index.Insert(std::make_pair(key, key));
+        }
+
+        auto inserter = std::thread(insert_workload, even_keys);
+        auto deleter = std::thread(delete_workload, odd_keys);
+
+        inserter.join();
+        deleter.join();
+
+        // Inserted odd keys to construct initial tree
+        // Inserted even keys, concurrently deleting odd keys
+        EXPECT_EQ((*index.Begin()).first, 0);
+        EXPECT_EQ((*index.RBegin()).first, 998);
+    }
 }

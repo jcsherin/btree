@@ -232,6 +232,22 @@ namespace bplustree {
         for (uint32_t worker_id = 0; worker_id < worker_threads; ++worker_id) {
             workers[worker_id].join();
         }
+
+        // ensure latches are released by attempting to insert
+        auto extra_key_count = 100;
+        std::vector<int> extra_keys(extra_key_count);
+        std::iota(extra_keys.begin(), extra_keys.end(), key_count);
+
+        std::shuffle(extra_keys.begin(), extra_keys.end(), std::mt19937{rd()});
+        for (auto &key: extra_keys) {
+            index.Insert(std::make_pair(key, key));
+        }
+
+        auto rit = index.RBegin();
+        EXPECT_EQ((*rit).first, key_count + extra_key_count - 1);
+
+        auto it = index.Begin();
+        EXPECT_EQ((*it).first, 0);
     }
 
     TEST(BPlusTreeConcurrentTest, HighBranchingFactorInserts) {

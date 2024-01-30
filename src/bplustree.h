@@ -569,6 +569,12 @@ namespace bplustree {
             return iter;
         }
 
+        static BPlusTreeIterator GetRetryIterator() {
+            auto iter = BPlusTreeIterator();
+            iter.SetRetryIterator();
+            return iter;
+        }
+
     private:
         enum IteratorState {
             VALID, INVALID, END, REND, RETRY
@@ -621,6 +627,10 @@ namespace bplustree {
 
         BPlusTreeIterator REnd() {
             return BPlusTreeIterator::GetREndIterator();
+        }
+
+        BPlusTreeIterator Retry() {
+            return BPlusTreeIterator::GetRetryIterator();
         }
 
         BPlusTreeIterator Begin() {

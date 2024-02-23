@@ -18,12 +18,13 @@ use in transactional database systems. It supports efficient:
 - point queries (key has to be an exact match)
 - range queries (keys within a range which satisfies a predicate)
 - forward and reverse sequential scans (in sorted key order)
-  The B+Tree is a balanced tree data structure. It means that the
-  distance from the root node to the leaf node is the same regardless of
-  which path is traversed. The key-value data pairs are stored only at
-  the leaf node level. A new key-value pair is always inserted in sorted
-  order in a leaf node. The internal nodes exist to guide key based
-  search and traversing to the right leaf node where a key maybe found.
+
+The B+Tree is a balanced tree data structure. It means that the
+distance from the root node to the leaf node is the same regardless of
+which path is traversed. The key-value data pairs are stored only at
+the leaf node level. A new key-value pair is always inserted in sorted
+order in a leaf node. The internal nodes exist to guide key based
+search and traversing to the right leaf node where a key maybe found.
 
 The leaf nodes are also connected to their siblings like a doubly linked
 list which makes range queries, and sequential scans possible. The

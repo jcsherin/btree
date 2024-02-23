@@ -82,6 +82,25 @@ split, then a new root node is created and the old root is made a child
 of the new root node. This increases the height of the B+Tree. This is
 how we rebalance the tree if an insert causes the nodes to overflow.
 
+### Rebalance After Deletes
+A leaf node or an internal node in the B+Tree should at least have a
+minimum 50% occupancy of its node degree. So removing a <key, value>
+pair can result in node underflow. There are two approaches to solving
+the underflow problem.
+
+1. Borrow an element from the left/right sibling node
+2. Merge the underflowing node with the left/right sibling node
+   In the case where sibling nodes merge, the entry for one of the nodes
+   has to be removed from the parent node. This in turn may cause
+   underflow in the parent internal node which can propagate all the way
+   to the root.
+   The root node is a special case and does not have to be 50% full. It
+   should contain at least one key, and two node pointers. The root node
+   underflows when it contains only one child node pointer. In this case
+   we promote the child as the new root of the tree, and release the old
+   root node. This reduces the height of the B+Tree. This is how
+   rebalancing the tree works when an element is removed from the tree.
+
 TODO
 
 - [ ] B+Tree primer

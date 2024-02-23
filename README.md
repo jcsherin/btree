@@ -101,6 +101,37 @@ the underflow problem.
    root node. This reduces the height of the B+Tree. This is how
    rebalancing the tree works when an element is removed from the tree.
 
+### Concurrency Issues
+An insert or delete updates the tree. During the operation the data
+structure is in an inconsistent state. But before and, after an
+operation which updates the tree the integrity of the data structure is
+intact. If the operations are performed sequentially nothing more needs
+to be done. But real world workloads are concurrent. It should be
+possible to update multiple parts of the tree, and interleave searches
+if they do will not affect each other. This rules out simple minded
+mechanism like a global latch(lock) on the B+Tree root node, which
+essentially reduces concurrency operations to nothing more than
+sequential access. The data structure integrity is intact, but we have
+no concurrency.
+
+A different approach is to acquire exclusive write latches along the
+path from the root to the leaf node when updating the B+Tree. Though
+this has a serious issue as every update operation has to acquire an
+exclusive write latches the root of the B+Tree. This blocks both readers
+and writers as contention is going to be the highest at the root node.
+So this also reduces concurrent access to sequential access.
+
+When latching the B+Tree deadlocks are possible. It is not desirable to
+add additional overhead for detecting deadlocks, and then resolving
+them. Instead the goal is to avoid deadlocks in the first place from
+ever happening through programming discipline.
+
+So these are the desirable features for designing a concurrency
+protocol:
+
+- Maximum possible concurrency
+- Guarantee that deadlocks cannot happen
+
 TODO
 
 - [ ] B+Tree primer

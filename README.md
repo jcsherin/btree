@@ -1,169 +1,193 @@
-# B+Tree
+B+Tree
 
-This is a thread-safe implementation of the B+Tree index data structure.
+Here you’ll find a thread-safe, in-memory implementation of the B+Tree
+data structure. I wrote this to learn first-hand the challenges involved
+in implementing a concurrent data structure correctly.
 
-- It implements the Bayer-Schkolnick concurrency protocol described
-  in [Concurrency of Operations on B-Trees](https://pages.cs.wisc.edu/~david/courses/cs758/Fall2007/papers/Concurrency%20of%20Operations.pdf).
-- The algorithm for insertion and deletion is from the
-  textbook [Database System Concepts - 7th edition](https://db-book.com/).
-- This code is adapted from the B+Tree implementation in the now
-  archived [NoisePage DBMS](https://db.cs.cmu.edu/projects/noisepage/),
-  which can be
-  found [here](https://github.com/cmu-db/noisepage/blob/master/src/include/storage/index/bplustree.h).
+The algorithm for key-value lookups, insertion and deletion are taken
+from the
+textbook — [Database System Concepts - 7th edition](https://db-book.com/).
+The Bayer-Schkolnick concurrency protocol is the one described in the
+paper - [Concurrency of Operations on B-Trees](https://pages.cs.wisc.edu/~david/courses/cs758/Fall2007/papers/Concurrency%20of%20Operations.pdf).
+The interface and data structure layout code is adapted
+[cmu-db/noisepage: Self-Driving Database Management System from Carnegie Mellon University](https://github.com/cmu-db/noisepage)
 
-## Draft
-# B+Tree
-## Internals
-A B+Tree is an (index) balanced tree data structure with many variants
-and of widespread use in transactional database systems.
-### Key Features
-It supports efficient:
-
-- point queries (key has to be an exact match)
-- range queries (keys within a range which satisfies a predicate)
-- forward and reverse sequential scans (in sorted key order)
-
-### Data Structure Invariants
-The B+Tree is a balanced tree data structure. It means that the distance
-from the root node to the leaf node is the same regardless of which path
-is traversed. The key-value data pairs are stored only at the leaf node
-level. A new key-value pair is always inserted in sorted order in a leaf
-node. The internal nodes exist to guide key based search and traversing
-to the right leaf node where a key maybe found. The leaf nodes are also
-connected to their siblings like a doubly linked list which makes range
-queries, and sequential scans possible.
-
-### Planner Access Method
-The database optimiser can generate a query plan which avoids an
-explicit sort step for queries which specify a sort order on a column
-attribute if there is a B+Tree index defined on that column. This is
-possible because the keys are already in sorted order, and possible to
-scan the leaf nodes sequentially in both forward and reverse directions.
-
-### Stable Worst Case Performance
-The balanced natured of the B+Tree also guarantees stable performance
-for key lookups regardless of the total number of keys. The lookup time
-depends only on the total number of keys stored in the B+Tree and the
-node degree. Node degree is the total child nodes a node can have. It
-also alternatively known as branching factor or fanout. For example, a
-B+Tree with a billion key-values and node degree of 64 has to search no
-more than 5 nodes in the entire tree to find a match.
-
-### Memory and I/O
-Nearly 99% of the nodes in a B+Tree are leaf nodes and only 1% of the
-nodes are internal nodes. So even when the B+Tree stores a large number
-of key-values and they do not fit into memory it maybe possible to fit
-the B+Tree into memory all the internal nodes. The leaf node being
-searched is then just one disk I/O away. Hot leaf nodes can be cached
-using a limited amount of additional memory, and a cache eviction policy
-which is resistant to sequential flooding, further reducing disk I/O for
-search queries.
-
-### Key Lookups
-The implementation of search is straight forward. Start at the root node
-of the tree and find the pivot <key, node pointer> pair for the input
-search key. Follow the node pointer down to the child node, and repeat
-until traversal reaches the leaf node. Return the value attached to the
-key if there is an exact match, or nothing.
-
-### Rebalance After Inserts
-When inserting a new <key, value> pair the same method as above is
-followed to navigate to the leaf node into which the insertion will
-happen. If the leaf node is not full we insert the <key, value> in-place
-in sorted order. If the leaf node is full then it has to be split and
-the existing <key, value> elements distributed evenly between both the
-nodes. After the node split the <key, value> pair the node into which it
-is inserted depends on the distribution of existing keys. Now a <key,
-node pointer> pair has to be added to the parent internal node to attach
-the newly created node to the tree. If the internal node is full, the
-split operation has to be repeated. And it’s possible the split can
-propagate back up to the root of the tree. If the root itself needs to
-split, then a new root node is created and the old root is made a child
-of the new root node. This increases the height of the B+Tree. This is
-how we rebalance the tree if an insert causes the nodes to overflow.
-
-### Rebalance After Deletes
-A leaf node or an internal node in the B+Tree should at least have a
-minimum 50% occupancy of its node degree. So removing a <key, value>
-pair can result in node underflow. There are two approaches to solving
-the underflow problem.
-
-1. Borrow an element from the left/right sibling node
-2. Merge the underflowing node with the left/right sibling node
-   In the case where sibling nodes merge, the entry for one of the nodes
-   has to be removed from the parent node. This in turn may cause
-   underflow in the parent internal node which can propagate all the way
-   to the root.
-   The root node is a special case and does not have to be 50% full. It
-   should contain at least one key, and two node pointers. The root node
-   underflows when it contains only one child node pointer. In this case
-   we promote the child as the new root of the tree, and release the old
-   root node. This reduces the height of the B+Tree. This is how
-   rebalancing the tree works when an element is removed from the tree.
-
-### Concurrency Issues
-An insert or delete updates the tree. During the operation the data
-structure is in an inconsistent state. But before and, after an
-operation which updates the tree the integrity of the data structure is
-intact. If the operations are performed sequentially nothing more needs
-to be done. But real world workloads are concurrent. It should be
-possible to update multiple parts of the tree, and interleave searches
-if they do will not affect each other. This rules out simple minded
-mechanism like a global latch(lock) on the B+Tree root node, which
-essentially reduces concurrency operations to nothing more than
-sequential access. The data structure integrity is intact, but we have
-no concurrency.
-
-A different approach is to acquire exclusive write latches along the
-path from the root to the leaf node when updating the B+Tree. Though
-this has a serious issue as every update operation has to acquire an
-exclusive write latches the root of the B+Tree. This blocks both readers
-and writers as contention is going to be the highest at the root node.
-So this also reduces concurrent access to sequential access.
-
-When latching the B+Tree deadlocks are possible. It is not desirable to
-add additional overhead for detecting deadlocks, and then resolving
-them. Instead the goal is to avoid deadlocks in the first place from
-ever happening through programming discipline.
-
-So these are the desirable features for designing a concurrency
-protocol:
-
-- Maximum possible concurrency
-- Guarantee that deadlocks cannot happen
-
-TODO
-
-- [ ] B+Tree primer
-    - [ ] Why?
-    - [ ] What? Structure & Properties
-    - [ ] How? Search & Traversal
-    - [ ] How? Insertion
-    - [ ] How? Deletion
-    - [ ] How? Iterators
-- [ ] Naive approach to concurrency
-- [ ] Goetz Graefe latch vs lock terminology
-- [ ] Latch crabbing concurrency
-- [ ] Iterator concurrency
-
-### Build
+## Interface
+Create a B+Tree index with an inner node fanout of 31, and a leaf node
+fanout of 32.
 
 ```
-mkdir build
+auto index = BPlusTree(31, 32);
+```
+
+Insert a 100 key-value elements like `(0, 0)`, `(1, 1)`, `(2, 2)` etc.
+into the index.
+
+```
+std::vector<int> keys(100);
+std::iota(keys.begin(), keys.end(), 0);
+
+for (auto &key: keys) {
+	index.Insert(std::make_pair(key, key));
+} 
+```
+
+Lookup key-value elements.
+
+```
+index.MaybeGet(50); 	// 50
+index.MaybeGet(100); 	// std::nullopt
+```
+
+Delete key-value elements.
+
+```
+auto deleted_1 = index.Delete(10); 		// deleted_1: true
+auto deleted_2 = index.Delete(110); 	// deleted_2: false
+```
+
+Forward iteration,
+
+```
+for (auto iter = index.Begin(); iter != index.End(); ++iter) {
+	int key = (*iter).first;
+	int value = (*iter).second;
+}
+```
+
+Reverse iteration,
+
+```
+for (auto iter = index.RBegin(); iter != index.REnd(); --iter) {
+	int key = (*iter).first;
+	int value = (*iter).second;
+}
+```
+
+## Build
+
+1. Create the build directory.
+
+```
+mkdir -p build
+```
+
+2. Run CMake in the build directory.
+
+```
 cd build
-
 cmake -DCMAKE_BUILD_TYPE=Debug ..
-cmake --build .
-
-cmake -DCMAKE_BUILD_TYPE=Release ..
-cmake --build .
-
-cmake --build . --target <name> // builds only the named targets
 ```
 
-### Tests
-Run build before this.
+3. Build tests
 
 ```
-./test/btree_test
+make btree_insert_test
+make btree_delete_test
+make btree_concurrent_test
 ```
+
+4. Run the tests
+
+```
+./test/btree_insert_test
+./test/btree_delete_test
+./test/btree_concurrent_test
+```
+
+## Testing
+The [tests](https://github.com/jcsherin/btree/tree/main/test) uses a
+small branching factor to trigger node overflows and underflows
+frequently. When combined with a high volume of key-value operations it
+helped catch many bugs early in the development of the concurrent B+Tree
+data structure.
+
+The [concurrent tests](https://github.com/jcsherin/btree/blob/main/test/btree_concurrent_test.cpp)
+uses both key randomization and interleaving of insertion/deletion
+operations to surface bugs in the concurrency protocol.
+
+Here are a few bugs revealed by the above tests,
+
+1. [Insertion deadlock](https://github.com/jcsherin/btree/blob/main/src/bplustree.h#L993-L1006)
+2. [Split internal node with insufficient node pointers](https://github.com/jcsherin/btree/blob/aa2c6c22f1cc47cd4ea1aa3f98443e5140f6cc05/src/bplustree.h#L1023-L1048)
+3. [Recheck conditions after entering critical section](https://github.com/jcsherin/btree/blame/aa2c6c22f1cc47cd4ea1aa3f98443e5140f6cc05/src/bplustree.h#L1191-L1203)
+4. [Prevent data-race when updating B+Tree root](https://github.com/jcsherin/btree/blame/aa2c6c22f1cc47cd4ea1aa3f98443e5140f6cc05/src/bplustree.h#L1501-L1517)
+
+## Modified Delete Rebalancing
+When optimistic delete fails, the B+Tree is rebalanced by first
+attempting to merge with a sibling node, and when that is not possible
+by borrowing a key-value element from a sibling node. This
+implementation switches the order and choose to borrow a key-value
+element first from the sibling node, before trying to merge with a
+sibling node.
+
+This has the advantage of completing deletion earlier. When the borrow
+is successful, then the deletion is done and the B+Tree is rebalanced.
+
+On the other hand when merging nodes, the parent internal node needs to
+be updated and it has a small possibility of underflowing as well. If
+that happens then rebalancing has propagated up the B+Tree and the
+deletion has to continue with tree rebalancing.
+
+So this implementation changes the order and first attempt to borrow,
+and only when that fails proceed with merge.
+## Concurrency Protocol
+Each node contains a latch which can be latched in shared/exclusive mode
+to protect the key-value elements from being simultaneously accessed by
+multiple threads. The concurrency protocol ensures that traversals,
+lookups, forward/reverse iterations of the B+Tree data structure works
+correctly even when interleaved with tree modifying operations like
+insertions/deletions.
+
+Several threads can own the shared latch on a node. This is useful for
+read-only operations on the node. But only one thread at a time can own
+an exclusive latch on a node. This is used for writing to the node.
+
+During traversal of the tree it’s important to ensure that the node
+still exists in the tree and has not been removed or merged into another
+node by another concurrent operation. So the thread holds the latch for
+the parent node, while it tries to acquire a latch for the child node.
+Only after the child node latch is acquired is the parent node latch
+released. This ensures that no concurrent modifications happened in
+between which invalidated the existence of the child node from the tree.
+This technique is known as crab-latching.
+
+In the case of forward/reverse iteration the thread attempts to acquire
+a latch on the node in a non-blocking manner. If unable to acquire a
+latch on the next sibling node all the latches currently held are
+released and the iteration itself is terminated.
+
+Deadlocks are avoided through programming discipline. The latches are
+acquired only in a single direction when traversing the tree from the
+root to the leaf nodes. In the case of forward/reverse iteration all
+held latches are released immediately if the next node cannot be
+latched. Both of these ensure that there will be no deadlocks.
+
+To have the maximum possible concurrency we have to take advantage of
+the fact that not every concurrent operation in the tree will happen in
+overlapping nodes. Also for every insertion/deletion if we acquired an
+exclusive latch from root to the leaf node, there would always be
+contention at the root node and reduce concurrency to being no better
+than sequential access. We instead rely on the fact that even when
+concurrent insertions/deletions overlap within the same leaf node and
+tree path, not all of them will lead to an overflow/underflow of the
+modified node. So we can get away will holding exclusive latches in more
+limited fashion improving concurrency.
+
+For insertions/deletions we check if a node is safe. A node is safe if
+the next insertion/deletion will not lead to node overflow/underflow.
+During traversal if the node below in the tree is safe then shared
+latches are acquired. All latches we acquired above are released. When a
+node is deemed unsafe because it will overflow/underflow then we acquire
+an exclusive latch on the node.
+
+To further improve concurrency in the first attempt we optimistically
+traverse the tree for insertions/deletions under the assumption that an
+exclusive latch will only be needed for the leaf node modification and
+this will not result in an overflow/underflow. This is going to be true
+most of the times. Only shared latches are acquired from the root to the
+leaf node. To modify the leaf node the shared latch is released and an
+exclusive latch is acquired. If at this point we realise that node will
+overflow/underflow the optimistic approach is abandoned. We restart
+traversal from the root of the tree this time acquiring exclusive
+latches along the path if there are unsafe nodes.

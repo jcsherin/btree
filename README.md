@@ -1,4 +1,4 @@
-B+Tree
+# B+Tree
 
 Here you’ll find a thread-safe, in-memory implementation of the B+Tree
 data structure. I wrote this to learn first-hand the challenges involved

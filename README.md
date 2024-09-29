@@ -4,12 +4,12 @@ Here you’ll find a thread-safe, in-memory implementation of the B+Tree
 data structure. I wrote this to learn first-hand the challenges involved
 in implementing a concurrent data structure correctly.
 
-The algorithm for key-value lookups, insertion and deletion are taken
+- The algorithm for key-value lookups, insertion and deletion are taken
 from the
 textbook — [Database System Concepts - 7th edition](https://db-book.com/).
-The Bayer-Schkolnick concurrency protocol is the one described in the
+- The Bayer-Schkolnick concurrency protocol is the one described in the
 paper - [Concurrency of Operations on B-Trees](https://pages.cs.wisc.edu/~david/courses/cs758/Fall2007/papers/Concurrency%20of%20Operations.pdf).
-The interface and data structure layout code is adapted
+- The interface and data structure layout code is adapted from
 [cmu-db/noisepage: Self-Driving Database Management System from Carnegie Mellon University](https://github.com/cmu-db/noisepage)
 
 ## Interface

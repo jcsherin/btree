@@ -16,14 +16,14 @@ paper - [Concurrency of Operations on B-Trees](https://pages.cs.wisc.edu/~david/
 Create a B+Tree index with an inner node fanout of 31, and a leaf node
 fanout of 32.
 
-```
+```c++
 auto index = BPlusTree(31, 32);
 ```
 
 Insert a 100 key-value elements like `(0, 0)`, `(1, 1)`, `(2, 2)` etc.
 into the index.
 
-```
+```c++
 std::vector<int> keys(100);
 std::iota(keys.begin(), keys.end(), 0);
 
@@ -34,21 +34,21 @@ for (auto &key: keys) {
 
 Lookup key-value elements.
 
-```
+```c++
 index.MaybeGet(50); 	// 50
 index.MaybeGet(100); 	// std::nullopt
 ```
 
 Delete key-value elements.
 
-```
+```c++
 auto deleted_1 = index.Delete(10); 		// deleted_1: true
 auto deleted_2 = index.Delete(110); 	// deleted_2: false
 ```
 
 Forward iteration,
 
-```
+```c++
 for (auto iter = index.Begin(); iter != index.End(); ++iter) {
 	int key = (*iter).first;
 	int value = (*iter).second;
@@ -57,7 +57,7 @@ for (auto iter = index.Begin(); iter != index.End(); ++iter) {
 
 Reverse iteration,
 
-```
+```c++
 for (auto iter = index.RBegin(); iter != index.REnd(); --iter) {
 	int key = (*iter).first;
 	int value = (*iter).second;
@@ -68,20 +68,20 @@ for (auto iter = index.RBegin(); iter != index.REnd(); --iter) {
 
 1. Create the build directory.
 
-```
+```sh
 mkdir -p build
 ```
 
 2. Run CMake in the build directory.
 
-```
+```sh
 cd build
 cmake -DCMAKE_BUILD_TYPE=Debug ..
 ```
 
 3. Build tests
 
-```
+```sh
 make btree_insert_test
 make btree_delete_test
 make btree_concurrent_test
@@ -89,7 +89,7 @@ make btree_concurrent_test
 
 4. Run the tests
 
-```
+```sh
 ./test/btree_insert_test
 ./test/btree_delete_test
 ./test/btree_concurrent_test

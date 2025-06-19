@@ -1,18 +1,18 @@
-# B+Tree
+## B+Tree
 
 Here you’ll find a thread-safe, in-memory implementation of the B+Tree
 data structure. I wrote this to learn first-hand the challenges involved
 in implementing a concurrent data structure correctly.
 
-- The algorithm for key-value lookups, insertion and deletion are taken
-from the
-textbook — [Database System Concepts - 7th edition](https://db-book.com/).
+- The algorithm for key-value lookups, insertion and deletion are taken from the
+  textbook — [Database System Concepts - 7th edition](https://db-book.com/).
 - The Bayer-Schkolnick concurrency protocol is the one described in the
-paper - [Concurrency of Operations on B-Trees](https://pages.cs.wisc.edu/~david/courses/cs758/Fall2007/papers/Concurrency%20of%20Operations.pdf).
-- The interface and data structure layout code is adapted from
-[cmu-db/noisepage: Self-Driving Database Management System from Carnegie Mellon University](https://github.com/cmu-db/noisepage)
+  paper - [Concurrency of Operations on B-Trees](https://pages.cs.wisc.edu/~david/courses/cs758/Fall2007/papers/Concurrency%20of%20Operations.pdf).
+- The interface and data structure layout code is adapted
+  from [cmu-db/noisepage: Self-Driving Database Management System from Carnegie Mellon University](https://github.com/cmu-db/noisepage)
 
-## Interface
+### Interface
+
 Create a B+Tree index with an inner node fanout of 31, and a leaf node
 fanout of 32.
 
@@ -64,7 +64,7 @@ for (auto iter = index.RBegin(); iter != index.REnd(); --iter) {
 }
 ```
 
-## Build
+### Build
 
 1. Create the build directory.
 
@@ -95,7 +95,24 @@ make btree_concurrent_test
 ./test/btree_concurrent_test
 ```
 
-## Testing
+### Clean Up
+
+To remove the compiled files from the build directory, you can run the `clean` target that CMake generates for `make`.
+
+```shell
+cd build
+make clean
+```
+
+To remove the entire build directory and all its contents, you can run the following command from the project's root
+directory:
+
+```shell
+rm -rf build
+```
+
+### Testing
+
 The [tests](https://github.com/jcsherin/btree/tree/main/test) uses a
 small branching factor to trigger node overflows and underflows
 frequently. When combined with a high volume of key-value operations it
@@ -113,7 +130,8 @@ Here are a few bugs revealed by the above tests,
 3. [Recheck conditions after entering critical section](https://github.com/jcsherin/btree/blame/aa2c6c22f1cc47cd4ea1aa3f98443e5140f6cc05/src/bplustree.h#L1191-L1203)
 4. [Prevent data-race when updating B+Tree root](https://github.com/jcsherin/btree/blame/aa2c6c22f1cc47cd4ea1aa3f98443e5140f6cc05/src/bplustree.h#L1501-L1517)
 
-## Modified Delete Rebalancing
+### Modified Delete Rebalancing
+
 When optimistic delete fails, the B+Tree is rebalanced by first
 attempting to merge with a sibling node, and when that is not possible
 by borrowing a key-value element from a sibling node. This
@@ -131,7 +149,9 @@ deletion has to continue with tree rebalancing.
 
 So this implementation changes the order and first attempt to borrow,
 and only when that fails proceed with merge.
-## Concurrency Protocol
+
+### Concurrency Protocol
+
 Each node contains a latch which can be latched in shared/exclusive mode
 to protect the key-value elements from being simultaneously accessed by
 multiple threads. The concurrency protocol ensures that traversals,

@@ -29,4 +29,4 @@ jobs:
         # Now that the executables are guaranteed to be built, ctest will find and run them.
         working-directory: ${{github.workspace}}/build
         # Exclude tests known to fail with ThreadSanitizer until they are fixed.
-        run: ctest --verbose -E '(delete|concurrent)'
+        run: ctest --verbose -E btree_delete_test -E btree_concurrent_test

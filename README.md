@@ -1,3 +1,5 @@
+[![C++ CI](https://github.com/jcsherin/btree/actions/workflows/ci.yml/badge.svg)](https://github.com/jcsherin/btree/actions/workflows/ci.yml)
+
 ## B+Tree
 
 Here you’ll find a thread-safe, in-memory implementation of the B+Tree

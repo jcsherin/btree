@@ -1,0 +1,32 @@
+name: C++ CI
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure CMake
+        # Runs the cmake command to configure the project
+        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build
+        # Builds all targets defined in the CMakeLists.txt
+        run: cmake --build ${{github.workspace}}/build
+
+      - name: Test
+        # Runs the tests using CTest, which was configured by gtest_discover_tests
+        working-directory: ${{github.workspace}}/build
+        run: ctest --output-on-failure

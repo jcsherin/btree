@@ -20,13 +20,9 @@ jobs:
       - name: Build Test Executables
         # We explicitly build each test target by name to ensure they exist before testing.
         working-directory: ${{github.workspace}}/build
-        run: |
-          make btree_insert_test
-          make btree_delete_test
-          make btree_concurrent_test
+        run: make btree_insert_test
 
       - name: Run Tests with CTest
         # Now that the executables are guaranteed to be built, ctest will find and run them.
         working-directory: ${{github.workspace}}/build
-        # Exclude tests known to fail with ThreadSanitizer until they are fixed.
-        run: ctest --verbose -E btree_delete_test -E btree_concurrent_test
+        run: ctest --verbose

@@ -1,6 +1,5 @@
 name: C++ CI
 
-# Controls when the workflow will run
 on:
   push:
     branches: [ "main" ]
@@ -9,20 +8,24 @@ on:
 
 jobs:
   build-and-test:
-    # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Configure CMake
-        # Runs the cmake command to configure the project
         run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Debug
 
-      - name: Build and Test
-        # It automatically builds the test executables first and then runs them with ctest.
-        # The ARGS=--verbose flag makes ctest output more detailed logs.
+      - name: Build Test Executables
+        # We explicitly build each test target by name to ensure they exist before testing.
         working-directory: ${{github.workspace}}/build
-        run: make test ARGS=--verbose
+        run: |
+          make btree_insert_test
+          make btree_delete_test
+          make btree_concurrent_test
+
+      - name: Run Tests with CTest
+        # Now that the executables are guaranteed to be built, ctest will find and run them.
+        working-directory: ${{github.workspace}}/build
+        run: ctest --verbose

@@ -135,7 +135,7 @@ int main() {
     for (auto &i: items) {
         index.Insert(std::make_pair(i, i));
     }
-    index.Delete(std::make_pair(21, 21));
+    index.Delete(21);
 //    index.Delete(std::make_pair(9, 9));
 
     std::cout << index.ToGraph() << std::endl;

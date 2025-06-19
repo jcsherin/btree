@@ -1,6 +1,8 @@
 #ifndef BPLUSTREE_H
 #define BPLUSTREE_H
 
+#include <cstring>
+#include <algorithm>
 #include <utility>
 #include <vector>
 #include <sstream>
@@ -353,10 +355,10 @@ namespace bplustree {
             }
 
             if (pivot == Begin()) {
-                return std::make_tuple(GetLowKeyPair().second, pivot);
+                return std::make_pair(GetLowKeyPair().second, pivot);
             }
 
-            return std::make_tuple(std::prev(pivot)->second, pivot);
+            return std::make_pair(std::prev(pivot)->second, pivot);
         }
 
         std::optional<std::pair<BaseNode *, KeyNodePointerPair *>> MaybeNextWithSeparator(int search_key) {
@@ -368,10 +370,10 @@ namespace bplustree {
             }
 
             if (pivot->second == GetLowKeyPair().second) {
-                return std::make_tuple(Begin()->second, Begin());
+                return std::make_pair(Begin()->second, Begin());
             }
 
-            return std::make_tuple(std::next(pivot)->second, std::next(pivot));
+            return std::make_pair(std::next(pivot)->second, std::next(pivot));
 
         }
     };

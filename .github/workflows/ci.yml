@@ -2,7 +2,6 @@ name: C++ CI
 
 # Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
     branches: [ "main" ]
   pull_request:
@@ -22,11 +21,8 @@ jobs:
         # Runs the cmake command to configure the project
         run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Debug
 
-      - name: Build
-        # Builds all targets defined in the CMakeLists.txt
-        run: cmake --build ${{github.workspace}}/build
-
-      - name: Test
-        # Runs the tests using CTest, which was configured by gtest_discover_tests
+      - name: Build and Test
+        # It automatically builds the test executables first and then runs them with ctest.
+        # The ARGS=--verbose flag makes ctest output more detailed logs.
         working-directory: ${{github.workspace}}/build
-        run: ctest --output-on-failure
+        run: make test ARGS=--verbose

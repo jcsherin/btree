@@ -24,4 +24,6 @@ add_executable(btree_concurrent_test btree_concurrent_test.cpp)
 target_link_libraries(btree_concurrent_test GTest::gtest_main)
 
 include(GoogleTest)
-gtest_discover_tests(btree_insert_test btree_delete_test btree_concurrent_test)
+gtest_discover_tests(btree_insert_test)
+gtest_discover_tests(btree_delete_test)
+gtest_discover_tests(btree_concurrent_test)

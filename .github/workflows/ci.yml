@@ -15,14 +15,15 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Configure CMake
-        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Debug
+        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Debug -DENABLE_TSAN=OFF
 
       - name: Build Test Executables
-        # We explicitly build each test target by name to ensure they exist before testing.
         working-directory: ${{github.workspace}}/build
-        run: make btree_insert_test
+        run: |
+          make btree_insert_test \
+            btree_delete_test \
+            btree_concurrent_test
 
       - name: Run Tests with CTest
-        # Now that the executables are guaranteed to be built, ctest will find and run them.
         working-directory: ${{github.workspace}}/build
         run: ctest --verbose

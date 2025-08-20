@@ -4,7 +4,10 @@ project(btree)
 enable_testing()
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=thread -g")
+option(ENABLE_TSAN "Enable ThreadSanitizer" ON)
+if(ENABLE_TSAN)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=thread -g")
+endif()
 
 add_subdirectory(test)
 

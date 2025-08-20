@@ -37,6 +37,8 @@ namespace bplustree {
                 type_{p_type},
                 max_size_{p_max_size} {}
 
+        virtual ~BaseNode() = default;
+
         NodeType GetType() { return type_; }
 
         int GetMaxSize() { return max_size_; }
@@ -111,9 +113,22 @@ namespace bplustree {
         /**
          * Free elastic node
          */
+        /**
+         * Performs manual destruction and deallocation for a node.
+         *
+         * This function is required because nodes are allocated using a C-style
+         * "struct hack" (a flexible array member with placement new) instead of
+         * standard C++ containers. Standard `delete` cannot be used on these
+         * nodes. This function ensures that all contained elements and the
+         * node's own members (e.g., its SharedLatch) are properly destructed
+         * before the raw memory is freed, preventing resource leaks.
+         */
         void FreeElasticNode() {
-            ElasticNode *alloc = this;
-            delete[] reinterpret_cast<char *>(alloc);
+            for (ElementType *element = this->Begin(); element < this->End(); ++element) {
+                element->~ElementType();
+            }
+            this->~BaseNode();
+            delete[] reinterpret_cast<char *>(this);
         }
 
         void SetEnd(int offset) { end_ = start_ + offset; }
@@ -274,9 +289,7 @@ namespace bplustree {
 
         InnerNode &operator=(InnerNode &&) = delete;
 
-        ~InnerNode() {
-            this->~ElasticNode<KeyNodePointerPair>();
-        }
+        ~InnerNode() = default;
 
         KeyNodePointerPair *FindLocation(const int key) {
             BaseNode *dummy_ptr = nullptr;
@@ -395,9 +408,7 @@ namespace bplustree {
 
         LeafNode &operator=(LeafNode &&) = delete;
 
-        ~LeafNode() {
-            this->~ElasticNode<KeyValuePair>();
-        }
+        ~LeafNode() = default;
 
         KeyValuePair *FindLocation(const int key) {
             KeyValuePair dummy = std::make_pair(key, 0);

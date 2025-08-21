@@ -15,12 +15,15 @@ FetchContent_MakeAvailable(googletest)
 enable_testing()
 
 add_executable(btree_insert_test btree_insert_test.cpp)
+target_compile_definitions(btree_insert_test PRIVATE ENABLE_LATCH_DEBUGGING)
 target_link_libraries(btree_insert_test GTest::gtest_main)
 
 add_executable(btree_delete_test btree_delete_test.cpp)
+target_compile_definitions(btree_delete_test PRIVATE ENABLE_LATCH_DEBUGGING)
 target_link_libraries(btree_delete_test GTest::gtest_main)
 
 add_executable(btree_concurrent_test btree_concurrent_test.cpp)
+target_compile_definitions(btree_concurrent_test PRIVATE ENABLE_LATCH_DEBUGGING)
 target_link_libraries(btree_concurrent_test GTest::gtest_main)
 
 include(GoogleTest)

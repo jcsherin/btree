@@ -1518,6 +1518,7 @@ namespace bplustree {
                 BPLUSTREE_ASSERT(holds_root_latch, "Has exclusive latch for modifying root");
 
                 if (node->GetCurrentSize() == 0) {
+                    node->ReleaseNodeExclusiveLatch();
                     node->FreeElasticNode();
 
                     root_ = nullptr;

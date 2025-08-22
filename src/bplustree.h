@@ -1243,44 +1243,91 @@ namespace bplustree {
 
                 auto maybe_previous = static_cast<InnerNode *>(parent)->MaybePreviousWithSeparator(keyToRemove);
                 if (maybe_previous.has_value()) {
+                    /**
+                     * A bug narrative:
+                     *
+                     * A lock-order-inversion (potential deadlock) was detected
+                     * by TSAN when a node, especially the right-most leaf node,
+                     * underflows and attempts to merge with its previous (left)
+                     * sibling.
+                     *
+                     * The deadlock occurs because of inconsistent lock acquisition
+                     * order between threads operating on adjacent nodes.
+                     *
+                     * For instance:
+                     * - Thread 1, operating on Node B, needs to merge with its
+                     *   previous sibling, Node A. It holds a lock on B and
+                     *   tries to acquire a lock on A. (Order: B -> A)
+                     * - Thread 2, operating on Node A, needs to merge with its
+                     *   next sibling, Node B. It holds a lock on A and tries
+                     *   to acquire a lock on B. (Order: A -> B)
+                     *
+                     * This creates a classic AB-BA deadlock.
+                     *
+                     * The fix is to enforce a strict left-to-right lock
+                     * acquisition order. This is a delicate operation. Before
+                     * locking the previous sibling (A), the exclusive lock on the
+                     * current node (B) is released. Then, locks are re-acquired
+                     * in the correct order: first on the previous sibling (A),
+                     * then on the current node (B).
+                     *
+                     * Releasing the lock means we might have pulled the rug out
+                     * from under ourselves. Another thread could have modified
+                     * the node in the interim, potentially even resolving the
+                     * underflow condition that prompted this rebalancing attempt.
+                     * Therefore, it is vital to re-check the node's state after
+                     * re-acquiring the locks and handle the possibility that the
+                     * original condition for the rebalance is not valid anymore.
+                     * This adds complexity to the code but is essential for
+                     * correctness.
+                     */
                     auto other = reinterpret_cast<ElasticNode<KeyValuePair> *>((*maybe_previous).first);
                     auto pivot = (*maybe_previous).second;
 
+                    current->ReleaseNodeExclusiveLatch();
                     other->GetNodeExclusiveLatch();
+                    current->GetNodeExclusiveLatch();
 
-                    bool will_underflow = (other->GetCurrentSize() - 1) < static_cast<LeafNode *>(other)->GetMinSize();
-                    if (!will_underflow) {
-                        node->InsertElementIfPossible((*other->RBegin()), node->Begin());
-                        other->PopEnd();
-                        pivot->first = node->Begin()->first;
-
-                        BPLUSTREE_ASSERT(node->GetCurrentSize() >= static_cast<LeafNode *>(node)->GetMinSize(),
-                                         "node meets minimum occupancy requirement after borrow from previous leaf node");
-                        BPLUSTREE_ASSERT(other->GetCurrentSize() >= static_cast<LeafNode *>(other)->GetMinSize(),
-                                         "borrowing one element did not cause underflow in previous leaf node");
-
-                        current->ReleaseNodeExclusiveLatch();
+                    if (node->GetCurrentSize() >= node->GetMinSize()) {
+                        // Underflow was resolved by another thread.
                         deletion_finished = true;
-                    } else {
-                        BPLUSTREE_ASSERT(other->GetCurrentSize() + node->GetCurrentSize() <= node->GetMaxSize(),
-                                         "contents will fit a single leaf node after merge");
-                        other->MergeNode(node);
-                        if (node->GetSiblingRight() != nullptr) {
-                            auto sibling_right = static_cast<LeafNode *>(node->GetSiblingRight());
-
-                            sibling_right->GetNodeExclusiveLatch();
-                            sibling_right->SetSiblingLeft(other);
-                            sibling_right->ReleaseNodeExclusiveLatch();
-                        }
-                        other->SetSiblingRight(node->GetSiblingRight());
-
-                        parent->DeleteElement(pivot);
-
                         current->ReleaseNodeExclusiveLatch();
-                        node->FreeElasticNode();
-                    }
+                        other->ReleaseNodeExclusiveLatch();
+                    } else {
+                        bool will_underflow = (other->GetCurrentSize() - 1) < static_cast<LeafNode *>(other)->GetMinSize();
+                        if (!will_underflow) {
+                            node->InsertElementIfPossible((*other->RBegin()), node->Begin());
+                            other->PopEnd();
+                            pivot->first = node->Begin()->first;
 
-                    other->ReleaseNodeExclusiveLatch();
+                            BPLUSTREE_ASSERT(node->GetCurrentSize() >= static_cast<LeafNode *>(node)->GetMinSize(),
+                                             "node meets minimum occupancy requirement after borrow from previous leaf node");
+                            BPLUSTREE_ASSERT(other->GetCurrentSize() >= static_cast<LeafNode *>(other)->GetMinSize(),
+                                             "borrowing one element did not cause underflow in previous leaf node");
+
+                            current->ReleaseNodeExclusiveLatch();
+                            other->ReleaseNodeExclusiveLatch();
+                            deletion_finished = true;
+                        } else {
+                            BPLUSTREE_ASSERT(other->GetCurrentSize() + node->GetCurrentSize() <= node->GetMaxSize(),
+                                             "contents will fit a single leaf node after merge");
+                            other->MergeNode(node);
+                            if (node->GetSiblingRight() != nullptr) {
+                                auto sibling_right = static_cast<LeafNode *>(node->GetSiblingRight());
+
+                                sibling_right->GetNodeExclusiveLatch();
+                                sibling_right->SetSiblingLeft(other);
+                                sibling_right->ReleaseNodeExclusiveLatch();
+                            }
+                            other->SetSiblingRight(node->GetSiblingRight());
+
+                            parent->DeleteElement(pivot);
+
+                            current->ReleaseNodeExclusiveLatch();
+                            other->ReleaseNodeExclusiveLatch();
+                            node->FreeElasticNode();
+                        }
+                    }
                 } else {
                     auto maybe_next = static_cast<InnerNode *>(parent)->MaybeNextWithSeparator(keyToRemove);
                     if (maybe_next.has_value()) {
@@ -1349,66 +1396,114 @@ namespace bplustree {
 
                 auto maybe_previous = static_cast<InnerNode *>(parent)->MaybePreviousWithSeparator(keyToRemove);
                 if (maybe_previous.has_value()) {
+                    /**
+                     * A bug narrative:
+                     *
+                     * A lock-order-inversion (potential deadlock) was detected
+                     * by TSAN when a node, especially the right-most leaf node,
+                     * underflows and attempts to merge with its previous (left)
+                     * sibling.
+                     *
+                     * The deadlock occurs because of inconsistent lock acquisition
+                     * order between threads operating on adjacent nodes.
+                     *
+                     * For instance:
+                     * - Thread 1, operating on Node B, needs to merge with its
+                     *   previous sibling, Node A. It holds a lock on B and
+                     *   tries to acquire a lock on A. (Order: B -> A)
+                     * - Thread 2, operating on Node A, needs to merge with its
+                     *   next sibling, Node B. It holds a lock on A and tries
+                     *   to acquire a lock on B. (Order: A -> B)
+                     *
+                     * This creates a classic AB-BA deadlock.
+                     *
+                     * The fix is to enforce a strict left-to-right lock
+                     * acquisition order. This is a delicate operation. Before
+                     * locking the previous sibling (A), the exclusive lock on the
+                     * current node (B) is released. Then, locks are re-acquired
+                     * in the correct order: first on the previous sibling (A),
+                     * then on the current node (B).
+                     *
+                     * Releasing the lock means we might have pulled the rug out
+                     * from under ourselves. Another thread could have modified
+                     * the node in the interim, potentially even resolving the
+                     * underflow condition that prompted this rebalancing attempt.
+                     * Therefore, it is vital to re-check the node's state after
+                     * re-acquiring the locks and handle the possibility that the
+                     * original condition for the rebalance is not valid anymore.
+                     * This adds complexity to the code but is essential for
+                     * correctness.
+                     */
                     auto other = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>((*maybe_previous).first);
+                    inner_node->ReleaseNodeExclusiveLatch();
                     other->GetNodeExclusiveLatch();
+                    inner_node->GetNodeExclusiveLatch();
 
                     auto pivot = (*maybe_previous).second;
 
-                    bool will_underflow = (other->GetCurrentSize() - 1) < static_cast<InnerNode *>(other)->GetMinSize();
-                    if (!will_underflow) {
-                        auto borrowed = *(other->RBegin());
-                        other->PopEnd();
-
-                        inner_node->InsertElementIfPossible(
-                                std::make_pair(pivot->first, inner_node->GetLowKeyPair().second),
-                                inner_node->Begin());
-                        inner_node->SetLowKeyPair(std::make_pair(pivot->first, borrowed.second));
-
-                        pivot->first = borrowed.first;
-
+                    if (inner_node->GetCurrentSize() >= static_cast<InnerNode *>(inner_node)->GetMinSize()) {
+                        // Underflow was resolved by another thread.
+                        deletion_finished = true;
                         inner_node->ReleaseNodeExclusiveLatch();
-                        /**
-                         *        (parent)
-                         *       +-------------+
-                         *       |...|Ky,Py|...|
-                         *       +-------------+
-                         *         /       \
-                         *        /         \
-                         *  +---------+    +--------+
-                         *  |...|Kx,Px|    |_,Pl|...|
-                         *  +---------+    +--------+
-                         *   (previous)    (underflow node)
-                         *
-                         *
-                         *        (parent)
-                         *       +-----------------+
-                         *       |...|  Kx,Py  |...|   <- pivot key updated
-                         *       +-----------------+
-                         *         /           \
-                         *        /             \
-                         *  +---------+        +--------------+
-                         *  |...|     |<--+    |_,Px|Ky,Pl|...| <--+
-                         *  +---------+   |    +--------------+    |
-                         *                |                        +-- Low key node pointer updated
-                         *                |                        +-- Old pivot key from parent and previous low key
-                         *                |                            node pointer added as the new first element
-                         *                |
-                         *                +--- last element removed from previous node
-                         */
+                        other->ReleaseNodeExclusiveLatch();
                     } else {
-                        other->InsertElementIfPossible(
-                                std::make_pair(pivot->first, inner_node->GetLowKeyPair().second),
-                                other->End()
-                        );
-                        other->MergeNode(inner_node);
+                        bool will_underflow = (other->GetCurrentSize() - 1) < static_cast<InnerNode *>(other)->GetMinSize();
+                        if (!will_underflow) {
+                            auto borrowed = *(other->RBegin());
+                            other->PopEnd();
 
-                        parent->DeleteElement(pivot);
+                            inner_node->InsertElementIfPossible(
+                                    std::make_pair(pivot->first, inner_node->GetLowKeyPair().second),
+                                    inner_node->Begin());
+                            inner_node->SetLowKeyPair(std::make_pair(pivot->first, borrowed.second));
 
-                        inner_node->ReleaseNodeExclusiveLatch();
-                        inner_node->FreeElasticNode();
+                            pivot->first = borrowed.first;
+
+                            inner_node->ReleaseNodeExclusiveLatch();
+                            other->ReleaseNodeExclusiveLatch();
+                            deletion_finished = true;
+                            /**
+                             *        (parent)
+                             *       +-------------+
+                             *       |...|Ky,Py|...|
+                             *       +-------------+
+                             *         /       \
+                             *        /         \
+                             *  +---------+    +--------+
+                             *  |...|Kx,Px|    |_,Pl|...|
+                             *  +---------+    +--------+
+                             *   (previous)    (underflow node)
+                             *
+                             *
+                             *        (parent)
+                             *       +-----------------+
+                             *       |...|  Kx,Py  |...|   <- pivot key updated
+                             *       +-----------------+
+                             *         /           \
+                             *        /             \
+                             *  +---------+        +--------------+
+                             *  |...|     |<--+    |_,Px|Ky,Pl|...| <--+
+                             *  +---------+   |    +--------------+    |
+                             *                |                        +-- Low key node pointer updated
+                             *                |                        +-- Old pivot key from parent and previous low key
+                             *                |                            node pointer added as the new first element
+                             *                |
+                             *                +--- last element removed from previous node
+                             */
+                        } else {
+                            other->InsertElementIfPossible(
+                                    std::make_pair(pivot->first, inner_node->GetLowKeyPair().second),
+                                    other->End()
+                            );
+                            other->MergeNode(inner_node);
+
+                            parent->DeleteElement(pivot);
+
+                            inner_node->ReleaseNodeExclusiveLatch();
+                            other->ReleaseNodeExclusiveLatch();
+                            inner_node->FreeElasticNode();
+                        }
                     }
-
-                    other->ReleaseNodeExclusiveLatch();
                 } else {
                     auto maybe_next = static_cast<InnerNode *>(parent)->MaybeNextWithSeparator(keyToRemove);
                     if (maybe_next.has_value()) {
@@ -1432,6 +1527,7 @@ namespace bplustree {
 
                             other->ReleaseNodeExclusiveLatch();
                             inner_node->ReleaseNodeExclusiveLatch();
+                            deletion_finished = true;
                             /**
                              *        (parent)
                              *       +-------------+

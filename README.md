@@ -1,4 +1,4 @@
-[![C++ CI](https://github.com/jcsherin/btree/actions/workflows/ci.yml/badge.svg)](https://github.com/jcsherin/btree/actions/workflows/ci.yml)
+[![C++ CI](https://github.com/jcsherin/btree/actions/workflows/ci.yml/badge.svg)](https://github.com/jcsherin/btree/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## B+Tree
 

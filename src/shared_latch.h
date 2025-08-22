@@ -10,14 +10,16 @@ namespace bplustree {
 
     class SharedLatch {
     public:
+        SharedLatch() = default;
+
 #ifdef ENABLE_LATCH_DEBUGGING
         ~SharedLatch() {
             if (exclusive_lock_count_ != 0) {
-                fprintf(stderr, "exclusive_lock_count_ is %d, expected 0\n", exclusive_lock_count_.load());
+                fprintf(stderr, "exclusive_lock_count_ is %d, expected 0 for latch %p\n", exclusive_lock_count_.load(), this);
             }
             assert(exclusive_lock_count_ == 0);
             if (shared_lock_count_ != 0) {
-                fprintf(stderr, "shared_lock_count_ is %d, expected 0\n", shared_lock_count_.load());
+                fprintf(stderr, "shared_lock_count_ is %d, expected 0 for latch %p\n", shared_lock_count_.load(), this);
             }
             assert(shared_lock_count_ == 0);
         }
@@ -69,4 +71,5 @@ namespace bplustree {
         std::atomic<int> shared_lock_count_{0};
 #endif
     };
+
 }

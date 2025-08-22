@@ -467,6 +467,9 @@ namespace bplustree {
                 state_{IteratorState::INVALID} {}
 
         ~BPlusTreeIterator() {
+            if (state_ == VALID && current_node_ != nullptr) {
+                current_node_->ReleaseNodeSharedLatch();
+            }
             current_node_ = nullptr;
             current_element_ = nullptr;
             state_ = INVALID;

@@ -743,7 +743,7 @@ namespace bplustree {
             auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
             auto iter = static_cast<LeafNode *>(node)->FindLocation(key);
 
-            auto result = (iter == node->End() | key != iter->first) ? std::nullopt : std::optional<int>{iter->second};
+            auto result = (iter == node->End() || key != iter->first) ? std::nullopt : std::optional<int>{iter->second};
             current_node->ReleaseNodeSharedLatch();
 
             return result;

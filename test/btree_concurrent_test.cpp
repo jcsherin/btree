@@ -243,11 +243,40 @@ namespace bplustree {
             index.Insert(std::make_pair(key, key));
         }
 
-        auto rit = index.RBegin();
-        EXPECT_EQ((*rit).first, key_count + extra_key_count - 1);
+        // WHY ARE THESE SCOPES NECESSARY? A NOTE ON CONCURRENCY.
+        //
+        // This B+Tree prevents deadlocks by enforcing a strict latching hierarchy:
+        // any thread, for any operation, must acquire a latch on an ancestor node
+        // before acquiring a latch on a descendant node (i.e., top-down traversal).
+        //
+        // This rule is particularly important for write operations (Insert/Delete),
+        // which may take exclusive latches on nodes as they traverse the tree.
+        //
+        // An iterator holds a SHARED latch on the leaf it points to. If that iterator
+        // remains alive while another operation attempts a new top-down traversal
+        // from the root, we can get a deadlock. Consider this scenario:
+        //
+        // 1. Thread A: Creates an iterator, holding a SHARED latch on a leaf node.
+        // 2. Thread B: Starts an INSERT, taking an EXCLUSIVE latch on the root.
+        // 3. Thread B: Traverses down and tries to take an EXCLUSIVE latch on the same
+        //              leaf node. It BLOCKS, waiting for Thread A's shared latch.
+        // 4. Thread A: Now attempts to create a *second* iterator (e.g., by calling
+        //              Begin()). It tries to take a SHARED latch on the root. It BLOCKS,
+        //              waiting for Thread B's exclusive latch.
+        //
+        // This is a classic deadlock. The scopes below prevent it by ensuring the
+        // first iterator's latch is released before the second operation begins.
+        // This rule applies even if both operations are in the same thread, because
+        // the latching protocol must be honored globally to ensure safety.
+        {
+            auto rit = index.RBegin();
+            EXPECT_EQ((*rit).first, key_count + extra_key_count - 1);
+        }
 
-        auto it = index.Begin();
-        EXPECT_EQ((*it).first, 0);
+        {
+            auto it = index.Begin();
+            EXPECT_EQ((*it).first, 0);
+        }
     }
 
     TEST(BPlusTreeConcurrentTest, HighBranchingFactorInserts) {

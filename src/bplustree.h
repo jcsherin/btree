@@ -649,6 +649,14 @@ namespace bplustree {
             return BPlusTreeIterator::GetRetryIterator();
         }
 
+        /**
+         * Returns an iterator to the beginning of the B+Tree.
+         *
+         * The returned iterator holds a shared latch on the leaf node it points to.
+         * To prevent potential deadlocks, this iterator's lifetime must end before
+         * any new top-down operation (including Begin, RBegin, Insert, etc.) is
+         * started in the same thread.
+         */
         BPlusTreeIterator Begin() {
             auto current_node = FindLeafNode();
             if (current_node == nullptr) {
@@ -659,6 +667,14 @@ namespace bplustree {
             return BPlusTreeIterator(node, node->Begin());
         }
 
+        /**
+         * Returns a reverse iterator to the end of the B+Tree.
+         *
+         * The returned iterator holds a shared latch on the leaf node it points to.
+         * To prevent potential deadlocks, this iterator's lifetime must end before
+         * any new top-down operation (including Begin, RBegin, Insert, etc.) is
+         * started in the same thread.
+         */
         BPlusTreeIterator RBegin() {
             auto current_node = FindLastLeafNode();
             if (current_node == nullptr) {

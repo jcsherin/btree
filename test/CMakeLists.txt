@@ -26,7 +26,12 @@ add_executable(btree_concurrent_test btree_concurrent_test.cpp)
 target_compile_definitions(btree_concurrent_test PRIVATE ENABLE_LATCH_DEBUGGING)
 target_link_libraries(btree_concurrent_test GTest::gtest_main)
 
+add_executable(btree_iterator_test btree_iterator_test.cpp)
+target_compile_definitions(btree_iterator_test PRIVATE ENABLE_LATCH_DEBUGGING)
+target_link_libraries(btree_iterator_test GTest::gtest_main)
+
 include(GoogleTest)
 gtest_discover_tests(btree_insert_test)
 gtest_discover_tests(btree_delete_test)
 gtest_discover_tests(btree_concurrent_test)
+gtest_discover_tests(btree_iterator_test)

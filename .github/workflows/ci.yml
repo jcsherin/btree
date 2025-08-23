@@ -22,7 +22,8 @@ jobs:
         run: |
           make btree_insert_test \
             btree_delete_test \
-            btree_concurrent_test
+            btree_concurrent_test \
+            btree_iterator_test
 
       - name: Run Tests with CTest
         working-directory: ${{github.workspace}}/build

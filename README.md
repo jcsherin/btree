@@ -66,6 +66,33 @@ for (auto iter = index.RBegin(); iter != index.REnd(); --iter) {
 }
 ```
 
+### A Note on Iterator Safety
+
+The B+Tree iterators (`Begin`, `RBegin`) are powerful tools, but they require careful handling in a concurrent environment to prevent deadlocks.
+
+**The Rule: An iterator's lifetime must not overlap with another top-down tree operation in the same thread.**
+
+**Why?**
+An iterator holds a shared "latch" (a read lock) on the leaf node it points to. The B+Tree's concurrency protocol requires that all operations acquire latches in a strict top-down order (from root to leaf).
+
+If you hold an iterator (and therefore a leaf latch) and then try to start a new operation (like creating a second iterator, or calling `Insert`), that new operation will try to acquire a latch on the root. This sequence (`lock leaf` -> `lock root`) violates the protocol and can cause a deadlock with another thread that is performing a write operation.
+
+**Correct Usage:**
+To use multiple iterators or mix iterators with other operations, ensure the previous iterator has gone out of scope before starting the next operation.
+
+```cpp
+// SAFE: Iterators are used in separate, non-overlapping scopes.
+{
+    auto it = index.Begin();
+    // ... use it
+} // it is destroyed here, its latch is released.
+
+{
+    auto rit = index.RBegin();
+    // ... use rit
+} // rit is destroyed here, its latch is released.
+```
+
 ### Build
 
 1. Create the build directory.
